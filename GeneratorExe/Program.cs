@@ -54,7 +54,7 @@ namespace CodeGeneration {
         if (fileIsNew) {
           allLines.Add(startMarker);
           allLines.Add("This files contains a version history including all changes relevant for semantic versioning...");
-          allLines.Add("*(it is automatically maintained using the 'VersioningUtil' by [KornSW](https://github.com/KornSW))*");
+          allLines.Add("*(it is automatically maintained using the ['KornSW-VersioningUtil'](https://github.com/KornSW/VersioningUtil))*");
           allLines.Add("");
           allLines.Add("");
         }
