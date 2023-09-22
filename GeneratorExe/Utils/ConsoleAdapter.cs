@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.ComponentModel;
 using System.Net.Http;
+using System.Text.Json;
+using Versioning;
 
 namespace Utils {
 
@@ -185,8 +187,13 @@ namespace Utils {
             result = _Mi.Invoke(null, parameterValues);
           else
             result = _Mi.Invoke(_Instance, parameterValues);
-          if ((result != null))
-            return result.ToString();
+          if ((result != null)) {
+            var opt = new JsonSerializerOptions();
+            opt.PropertyNameCaseInsensitive = true;
+            opt.IncludeFields = true;
+            opt.WriteIndented = true;
+            return JsonSerializer.Serialize(result, opt);
+          }
           else
             return string.Empty;
         }
@@ -649,8 +656,21 @@ namespace Utils {
           m.GetParameters()[1].IsOut
         ).FirstOrDefault();
 
-        if ((parseMethod == null))
+        if ((parseMethod == null)) {
+          try {
+            if (sourceText.StartsWith("{")) {
+              var opt = new JsonSerializerOptions();
+              opt.PropertyNameCaseInsensitive = true;
+              opt.IncludeFields = true;
+              opt.WriteIndented = true;
+              target = JsonSerializer.Deserialize(sourceText, targetType, opt);
+              return true;
+            }
+          }
+          catch {
+          }
           return false;
+        }
         else {
           object def = null;
           if (targetType.IsValueType) {

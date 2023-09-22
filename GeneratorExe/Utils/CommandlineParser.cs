@@ -191,11 +191,19 @@ namespace Utils {
             }
 
           default: {
+              if ((terminationActive)) {
+                currentArg.Append(_TerminatorChar);
+                terminationActive = false;
+              }
               currentArg.Append(currentChar);
-              terminationActive = false;
               break;
             }
         }
+      }
+
+      //special case if terminator is LAST char!
+      if ((terminationActive)) {
+        currentArg.Append(_TerminatorChar);
       }
 
       // submit the last argument

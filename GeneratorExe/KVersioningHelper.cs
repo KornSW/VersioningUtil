@@ -1,11 +1,16 @@
-﻿using System;
+﻿using FileIO;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using Utils;
 using Versioning;
 
 namespace Versioning {
@@ -88,6 +93,12 @@ namespace Versioning {
       if (string.IsNullOrWhiteSpace(targetFile)) {
         return;
       }
+
+      if (targetFile.Contains("*")) {
+        this.SetVersion(info.currentVersionWithSuffix, targetFile);
+        return;
+      }
+
       if (!Path.IsPathRooted(targetFile)) {
         targetFile = Path.Combine(Environment.CurrentDirectory, targetFile);
       }
@@ -105,12 +116,12 @@ namespace Versioning {
             sw.WriteLine("{");
             sw.WriteLine($"  \"currentVersion\": \"{info.currentVersion}\"");
             sw.WriteLine($"  \"currentVersionWithSuffix\": \"{info.currentVersionWithSuffix}\"");
-            sw.WriteLine($"  \"releaseType\": \"{info.releaseType}\"");
+            sw.WriteLine($"  \"releaseType\": \"{info.preReleaseSuffix}\"");
             sw.WriteLine($"  \"previousVersion\": \"{info.previousVersion}\"");
             sw.WriteLine($"  \"changeGrade\": \"{info.changeGrade}\"");
             sw.WriteLine($"  \"currentMajor\": {info.currentMajor}");
             sw.WriteLine($"  \"currentMinor\": {info.currentMinor}");
-            sw.WriteLine($"  \"currentPatch\": {info.currentPatch}");
+            sw.WriteLine($"  \"currentPatch\": {info.currentFix}");
             sw.WriteLine($"  \"versionDateInfo\": \"{info.versionDateInfo}\"");
             sw.WriteLine($"  \"versionTimeInfo\": \"{info.versionTimeInfo}\"");
             sw.WriteLine($"  \"versionNotes\": \"{info.versionNotes.Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"")}\"");
@@ -140,17 +151,124 @@ namespace Versioning {
       string targetFilesToProcess,
       string metaDataSourceFile = "versioninfo.json"
     ) {
+      IVersionContainer src = InitializeVersionContainerByFileType(metaDataSourceFile);
+      if (src == null) {
+        Console.WriteLine("Invalid metaDataSourceFile '" + metaDataSourceFile + "'");
+        return;
+      }
+      VersionInfo vers = src.ReadVersion();
+      var res = new FilePlaceholderResolver(vers);
+      string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
+      foreach (var fileFullName in allFileFullNames) {
+        try {
+          res.ResolvePlaceholders(fileFullName);
+        }
+        catch (Exception ex) {
+          Console.WriteLine(ex.Message);
+        }
+      }
+    }
 
+    /// <summary>
+    /// You can use this method to test you minimatch patterns...
+    /// </summary>
+    /// <param name="minimatchPatterns"></param>
+    /// <returns></returns>
+    public string[] ListFiles(string minimatchPatterns) {
 
-     //TODO: wir brauchen noch opensource SINGLE-FILE Json reader/writer + XML damit wir referenzfrei bleiben!
+      //IF CALLED WITH SINGLE FILE
+      if(!minimatchPatterns.Contains("*") && !minimatchPatterns.Contains(";") && !minimatchPatterns.Contains("!")) {
+        if (!Path.IsPathRooted(minimatchPatterns)) {
+          minimatchPatterns = Path.Combine(Environment.CurrentDirectory, minimatchPatterns);
+        }
+        minimatchPatterns = Path.GetFullPath(minimatchPatterns);       
+        if (File.Exists(minimatchPatterns)) {
+          Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... OK");
+          return new string[] {minimatchPatterns};
+        }
+        else {
+          Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... not found !");
+          return new string[] { };
+        }
+      }
 
+      IEnumerable<string> result = new string[] { };
+      var opt = new Options();
+      opt.NoCase = true;
 
+      var patterns = minimatchPatterns.Split(";");
 
+      foreach (var pattern in patterns.Where((p) => !p.StartsWith("!"))) {
+        var cleaned = pattern.Replace("/", "\\");
 
+        string startDir = "";
+        string dynamicSubPath = "";
 
+        if (!Path.IsPathRooted(cleaned)) {
+          cleaned = Path.Combine(Environment.CurrentDirectory, cleaned);     
+        }
 
+        int idxFirstStar = cleaned.IndexOf("*");
 
+        if (idxFirstStar < 0) {
+          startDir = Path.GetDirectoryName(cleaned);
+          dynamicSubPath = Path.GetFileName(cleaned);
+        }
+        else {
+          int sepIdx = cleaned.Substring(0, idxFirstStar).LastIndexOf(Path.DirectorySeparatorChar);
+          startDir = cleaned.Substring(0, sepIdx);
+          dynamicSubPath = cleaned.Substring(sepIdx + 1);
+        }
+        //normalize
+        startDir = Path.GetFullPath(startDir);
+        int startDirLength = startDir.Length + 1;
 
+        Console.WriteLine($"Search on '{startDir}' for '{dynamicSubPath}'");
+
+        DirectoryInfo di = new DirectoryInfo(startDir);
+        var fileFullNames = di.GetFiles("*.*", searchOption: SearchOption.AllDirectories).Select(
+          (fi) => fi.FullName.Substring(startDirLength).Replace("\\", "/")
+        ).ToArray();
+
+        result = result.Union(Minimatcher.Filter(fileFullNames, dynamicSubPath.Replace("\\", "/"), opt).Select(
+          (matchFileName) => Path.Combine(startDir, matchFileName.Replace("/","\\"))
+        ));
+
+      }
+
+      result = result.Distinct();
+
+      foreach (var pattern in patterns.Where((p) => p.StartsWith("!"))) {
+        var cleaned = pattern.Replace("/", "\\").Substring(1);//remove the "!"
+
+        Console.WriteLine($"Removing matches for '{cleaned}'");
+
+        if (!Path.IsPathRooted(cleaned)) {
+          cleaned = Path.Combine(Environment.CurrentDirectory, cleaned);
+        }
+        int idxFirstStar = cleaned.IndexOf("*");
+        if (idxFirstStar < 0) {
+          //normalize
+          cleaned = Path.GetFullPath(cleaned);
+        }
+        else {
+          string startDir = "";
+          string dynamicSubPath = "";
+          int sepIdx = cleaned.Substring(0, idxFirstStar).LastIndexOf(Path.DirectorySeparatorChar);
+          startDir = cleaned.Substring(0, sepIdx);
+          dynamicSubPath = cleaned.Substring(sepIdx + 1);
+          //normalize
+          startDir = Path.GetFullPath(startDir);
+          cleaned = Path.Combine (startDir, dynamicSubPath);
+        }
+
+        string pat = "!" + cleaned.Replace("\\", "/");
+        result = result.Where( //             (our results are fully rooted VVVVV remove workdir to match in the seldom case, taht the pattern donst starts with **\)
+          (f) => Minimatcher.Check(f.Replace(Environment.CurrentDirectory + "\\","").Replace("\\","/"), pat, opt)
+        );
+      }
+
+      return result.ToArray(); 
     }
 
     /// <summary>
@@ -169,29 +287,30 @@ namespace Versioning {
       string targetFilesToProcess
     ) {
 
+      string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
+      foreach (var fileFullName in allFileFullNames) {
+        try {
+          IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
+          VersionInfo vers = tgt.ReadVersion();
 
+          if(majority == 1) {
+            vers.IncreaseCurrentMajor(true, true);
+          }
+          else if (majority == 2) {
+            vers.IncreaseCurrentMinor(true);
+          }
+          else {
+            vers.IncreaseCurrentFix(true);
+          }
 
-
-
-
-
-      //string nam = Path.GetFileName(targetFileToProcess).ToLower();
-      //string ext = Path.GetExtension(targetFileToProcess).ToLower();
-      //if (
-      //  ext == ".nuspec" || ext == ".vbproj" || ext == ".csproj" || nam == "package.json" || nam == "assemblyinfo.vb" || nam == "assemblyinfo.cs"
-      //) {
-        
-      //}
-      //else { 
-      //}
-
-
-
-
-
-
-
+          tgt.WriteVersion(vers);
+        }
+        catch (Exception ex) {
+          Console.WriteLine(ex.Message);
+        }
       }
+
+    }
 
     /// <summary>
     /// SAMPLE: SetVersion "1.2.3-alpha" "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;"
@@ -211,17 +330,20 @@ namespace Versioning {
       string targetFilesToProcess
     ) {
 
+      VersionInfo vers = new VersionInfo();
+      vers.currentVersionWithSuffix = semanticVersion;
+      vers.CurrentVersionWithSuffix2CurrentVersionAndPrereleaseSuffx(true);
 
-
-
-
-
-
-
-
-
-
-
+      string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
+      foreach (var fileFullName in allFileFullNames) {
+        try {
+          IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
+          tgt.WriteVersion(vers);
+        }
+        catch (Exception ex) {
+          Console.WriteLine(ex.Message);
+        }
+      }
 
     }
 
@@ -245,19 +367,22 @@ namespace Versioning {
       string targetFilesToProcess,
       string metaDataSourceFile = "versioninfo.json"
     ) {
-
-
-
-
-
-
-
-
-
-
-
-
-
+      IVersionContainer src = InitializeVersionContainerByFileType(metaDataSourceFile);
+      if (src == null) {
+        Console.WriteLine("Invalid metaDataSourceFile '" + metaDataSourceFile + "'");
+        return;
+      }
+      VersionInfo vers = src.ReadVersion();
+      string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
+      foreach (var fileFullName in allFileFullNames) {
+        try {
+          IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
+          tgt.WriteVersion(vers);
+        }
+        catch (Exception ex) {
+          Console.WriteLine(ex.Message);
+        }
+      }
     }
 
     /// <summary>
@@ -279,18 +404,7 @@ namespace Versioning {
       string semanticVersion,
       string targetFilesToProcess
     ) {
-
-
-
-
-
-
-
-
-
-
-
-
+      throw new NotImplementedException();
     }
 
     /// <summary>
@@ -315,17 +429,7 @@ namespace Versioning {
       string targetFilesToProcess,
       string metaDataSourceFile = "versioninfo.json"
     ) {
-
-
-
-
-
-
-
-
-
-
-
+      throw new NotImplementedException();
     }
 
     #region " INTERNAL HELPERS "
@@ -455,9 +559,9 @@ namespace Versioning {
     private static VersionInfo ProcessMarkdownAndCreateNewVersion(List<string> allLines, string preReleaseSemantic = "") {
       var versionInfo = new VersionInfo();
 
-      versionInfo.releaseType = "official";
+      versionInfo.preReleaseSuffix = "official";
       if (!string.IsNullOrWhiteSpace(preReleaseSemantic)) {
-        versionInfo.releaseType = preReleaseSemantic.Trim().ToLower();
+        versionInfo.preReleaseSuffix = preReleaseSemantic.Trim().ToLower();
       }
 
       int startIndex = FindIndex(allLines, startMarker);
@@ -604,7 +708,7 @@ namespace Versioning {
 
       versionInfo.currentMajor = lastVersion.Major;
       versionInfo.currentMinor = lastVersion.Minor;
-      versionInfo.currentPatch = lastVersion.Build;
+      versionInfo.currentFix = lastVersion.Build;
 
       var preAlreadyIncreasedMajor = (lastVersion.Major < lastVersionOrPre.Major);
       var preAlreadyIncreasedMinor = (lastVersion.Minor < lastVersionOrPre.Minor);
@@ -615,32 +719,32 @@ namespace Versioning {
         if (versionInfo.currentMajor > 0 || mpvReachedTrigger) {
           versionInfo.currentMajor++;
           versionInfo.currentMinor = 0;
-          versionInfo.currentPatch = 0;
+          versionInfo.currentFix = 0;
         }
         else {
           //bei prereleases zu major=0 (also in der alpha phase) gibt es max ein minor-increment (da sind breaking changes erlaubt);
           versionInfo.currentMinor++;
-          versionInfo.currentPatch = 0;
+          versionInfo.currentFix = 0;
         }
       }
       else if (versionInfo.changeGrade == "minor" || preAlreadyIncreasedMinor) {
         versionInfo.currentMinor++;
-        versionInfo.currentPatch = 0;
+        versionInfo.currentFix = 0;
       }
       else {
-        versionInfo.currentPatch++;
+        versionInfo.currentFix++;
       }
 
       //gan am anfang kann man nicht mit einer 0.0.x starten -> 0.1 ist das minimom
       if (versionInfo.currentMajor == 0 && versionInfo.currentMinor == 0) {
         versionInfo.currentMinor = 1;
-        versionInfo.currentPatch = 0;
+        versionInfo.currentFix = 0;
       }
 
       if (versionInfo.currentMajor == 0 && mpvReachedTrigger) {
         versionInfo.currentMajor = 1;
         versionInfo.currentMinor = 0;
-        versionInfo.currentPatch = 0;
+        versionInfo.currentFix = 0;
       }
 
       //last prerelese mit einbeziehen
@@ -653,29 +757,29 @@ namespace Versioning {
 
         if (versionInfo.currentMajor == lastVersionOrPre.Major &&
           versionInfo.currentMinor == lastVersionOrPre.Minor &&
-          versionInfo.currentPatch <= lastVersionOrPre.Build
+          versionInfo.currentFix <= lastVersionOrPre.Build
         ) {
-          if (versionInfo.releaseType == "official") {
+          if (versionInfo.preReleaseSuffix == "official") {
             //nur hochzziehen wenn nötig
-            versionInfo.currentPatch = lastVersionOrPre.Build;
+            versionInfo.currentFix = lastVersionOrPre.Build;
           }
           else {
             //weiter zählen
-            versionInfo.currentPatch = lastVersionOrPre.Build + 1;
+            versionInfo.currentFix = lastVersionOrPre.Build + 1;
           }
 
         }
 
       }
 
-      Version currentVersion = new Version(versionInfo.currentMajor, versionInfo.currentMinor, versionInfo.currentPatch);
+      Version currentVersion = new Version(versionInfo.currentMajor, versionInfo.currentMinor, versionInfo.currentFix);
       versionInfo.currentVersion = currentVersion.ToString(3);
       versionInfo.previousVersion = lastVersion.ToString(3);
 
       //neuen version setzen
       allLines.Insert(upcommingChangesIndex + 1, $"released **{versionInfo.versionDateInfo}**, including:");
 
-      if (versionInfo.releaseType == "official") {
+      if (versionInfo.preReleaseSuffix == "official") {
 
         //upcomming wird zu release
         allLines[upcommingChangesIndex] = releasedVersionMarker.TrimEnd() + $" {currentVersion.ToString(3)}";
@@ -692,11 +796,30 @@ namespace Versioning {
       }
       else {
         //upcomming wird einfach aktualisiert
-        allLines[upcommingChangesIndex] = upcommingChangesMarker.TrimEnd() + $" ({currentVersion.ToString(3)}-{versionInfo.releaseType})";
-        versionInfo.currentVersionWithSuffix = versionInfo.currentVersion + "-" + versionInfo.releaseType;
+        allLines[upcommingChangesIndex] = upcommingChangesMarker.TrimEnd() + $" ({currentVersion.ToString(3)}-{versionInfo.preReleaseSuffix})";
+        versionInfo.currentVersionWithSuffix = versionInfo.currentVersion + "-" + versionInfo.preReleaseSuffix;
       }
 
       return versionInfo;
+    }
+
+    private static IVersionContainer InitializeVersionContainerByFileType(string fileFullName) {
+      if (fileFullName.Equals("package.json", StringComparison.InvariantCultureIgnoreCase)) {
+        return new NpmPackageJsonFileAccessor(fileFullName);
+      }
+      else if (fileFullName.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)) {
+        return new VersionInfoJsonFileAccessor(fileFullName);
+      }
+      else if (fileFullName.EndsWith(".vbproj", StringComparison.InvariantCultureIgnoreCase) || fileFullName.EndsWith(".csproj", StringComparison.InvariantCultureIgnoreCase)) {
+        return new VsProjFileAccessor(fileFullName);
+      }
+      else if (fileFullName.EndsWith(".vb", StringComparison.InvariantCultureIgnoreCase) || fileFullName.EndsWith(".cs", StringComparison.InvariantCultureIgnoreCase)) {
+        return new AssemblyInfoFileAccessor(fileFullName);
+      }
+      else if (fileFullName.EndsWith(".nuspec", StringComparison.InvariantCultureIgnoreCase)) {
+        return new NuspecFileAccessor(fileFullName);
+      }
+      return null;
     }
 
     #endregion
