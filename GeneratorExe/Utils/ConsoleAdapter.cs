@@ -30,6 +30,13 @@ namespace Utils {
     }
 
     private ConsoleAdapter() {
+      try {
+        _OldLeft = Console.CursorLeft;
+        _OldTop = Console.CursorTop;
+      }
+      catch {
+        //some environments are not supporting cursor positions
+      }
     }
 
     public void RegisterInvokationTarget<TTargetType>(TTargetType instance) {
@@ -361,8 +368,8 @@ namespace Utils {
     }
 
     private StringBuilder _CurrentInputBuffer = new StringBuilder();
-    private int _OldLeft = Console.CursorLeft;
-    private int _OldTop = Console.CursorTop;
+    private int _OldLeft = 0;
+    private int _OldTop = 0;
 
     public string ReadLine() {
       lock (this) {
