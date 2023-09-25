@@ -14,6 +14,7 @@ using System.ComponentModel;
 using System.Net.Http;
 using System.Text.Json;
 using Versioning;
+using System.Security.Cryptography;
 
 namespace Utils {
 
@@ -207,8 +208,22 @@ namespace Utils {
           Console.WriteLine(this.GetHelpString(false));
           Console.ForegroundColor = oldColor;
         }
+        catch (TargetInvocationException ex) {
+          var old = Console.ForegroundColor;
+          Console.ForegroundColor = ConsoleColor.Red;
+          if (ex.InnerException != null) {
+            Console.WriteLine(ex.InnerException.Message);
+          }
+          else {
+            Console.WriteLine(ex.Message);
+          }
+          Console.ForegroundColor = old;
+        }
         catch (Exception ex) {
+          var old = Console.ForegroundColor;
+          Console.ForegroundColor = ConsoleColor.Red;
           Console.WriteLine(ex.Message);
+          Console.ForegroundColor = old;
         }
         return string.Empty;
       }
@@ -590,7 +605,10 @@ namespace Utils {
       var defaultParams = cmdParser.Arguments[0].Params;
       var cmd = _CommandCache.Keys.Where(k => k.ToLower() == defaultParams[0].ToLower()).SingleOrDefault();
       if ((cmd == null)) {
+        var old = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine("UNKNOWN COMMAND!");
+        Console.ForegroundColor = old;
         this.PrintAllComands();
       }
       else {

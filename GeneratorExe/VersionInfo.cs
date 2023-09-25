@@ -85,7 +85,7 @@ namespace Versioning {
     }
 
     public String previousVersion { get; set; } = "0.0.0";
-    public String changeGrade { get; set; } = "fix";
+    public String changeGrade { get; set; } = "initial";
     public void RecalculateChangeGradeBasedOnPreviousVersion() {
       ParseVersion(previousVersion, out int pMaj, out int pMin, out int pFix, out string pPreReleaseSuffix);
       ParseVersion(currentVersion, out int cMaj, out int cMin, out int cFix, out string cPreReleaseSuffix);
@@ -103,8 +103,8 @@ namespace Versioning {
       }
     }
 
-    public String versionTimeInfo { get; set; } = DateTime.Now.ToString("HH:mm:ss");
-    public String versionDateInfo { get; set; } = DateTime.Now.ToString("yyyy-MM-dd");
+    public String versionTimeInfo { get; set; } = "00:00:00";
+    public String versionDateInfo { get; set; } = "1900-01-01";
     public String versionNotes { get; set; } = "";
 
     #region " Helpers "

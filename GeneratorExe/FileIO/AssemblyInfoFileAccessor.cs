@@ -13,14 +13,28 @@ namespace FileIO {
     private string _FileFullName;
 
     public AssemblyInfoFileAccessor(string fileFullName) {
-      _FileFullName = fileFullName;
+      _FileFullName = Path.GetFullPath(fileFullName);
       if (!File.Exists(fileFullName)) {
         throw new FileNotFoundException("Could not find File: " + fileFullName);
       }
     }
 
     public VersionInfo ReadVersion() {
-      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+      string rawContent; // = File.ReadAllText(_FileFullName, Encoding.Default);
+
+      //we need to filter code that is commented out
+      //in default ms provides an info-comment which contains a sample version attribute,
+      //which shouldnt be catched by our regex search!
+      var sb = new StringBuilder(6000);
+      string[] rawContentLines = File.ReadAllLines(_FileFullName, Encoding.Default);
+      foreach (string rawContentLine in rawContentLines) {
+        string trimmedLine = rawContentLine.Trim();
+        if (!trimmedLine.StartsWith("'") && !trimmedLine.StartsWith("//")) {
+          sb.AppendLine(trimmedLine);
+        }
+      }
+      rawContent = sb.ToString();
+
       var versionInfo = new VersionInfo();
 
       var matchVers = Regex.Matches(rawContent, _RegexSearchVers).FirstOrDefault();
@@ -32,11 +46,11 @@ namespace FileIO {
       if (matchInfoVers != null) {
         versionInfo.currentVersionWithSuffix = matchInfoVers.Value.Substring(39, matchInfoVers.Value.Length - 41);
       }
-
-      if (string.IsNullOrWhiteSpace(versionInfo.currentVersionWithSuffix)) {
+      else {
         versionInfo.CurrentVersionAndPrereleaseSuffix2CurrentVersionWithSuffix();
       }
-      else if (matchVers == null) {
+
+      if (matchVers == null) {
         versionInfo.CurrentVersionWithSuffix2CurrentVersionAndPrereleaseSuffx();
       }
 

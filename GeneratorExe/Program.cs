@@ -1,6 +1,7 @@
 ﻿using FileIO;
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using Utils;
 
 
@@ -15,21 +16,29 @@ namespace Versioning {
         Console.SetWindowSize(120, 50);
         Console.SetBufferSize(120, 8000);
 
+        string myVers = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
+
         var adapter = ConsoleAdapter.GetInstance();
         adapter.RegisterInvokationTarget(new KVersioningHelper());
 
         if(args.Length == 0) {
-          Console.WriteLine("WELCOME - were running in console mode (hit F1 to see possible comands or type 'exit' to leave):");
+          Console.WriteLine($"WELCOME to the 'kVersioningUtil' v{myVers}");
+          Console.WriteLine("were running in console mode (hit F1 to see possible commands or type 'exit' to leave):");
+
           adapter.EnterConsoleLoop();
           return 0;
         }
         else {
+          Console.WriteLine($"'kVersioningUtil' v{myVers} running in commandline mode...");
           adapter.InvokeCommand(args);
         }
 
       }
       catch (Exception ex) {
+        var old = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine("ERROR: " + ex.Message);
+        Console.ForegroundColor = old;
         return 1;
       }
       Console.WriteLine("completed...");

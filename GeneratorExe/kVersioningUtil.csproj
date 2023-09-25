@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,10 +8,10 @@
     <ApplicationIcon>AppIcon.ico</ApplicationIcon>
     <StartupObject>Versioning.Program</StartupObject>
     <Authors>KornSW</Authors>
-    <Company>KornSW</Company>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
-    <Version>1.0.0</Version>
+    <Company>OpenSouce (KornSW)</Company>
+    <AssemblyVersion>2.1.0.0</AssemblyVersion>
+    <FileVersion>2.1.0.0</FileVersion>
+    <Version>2.1.0</Version>
     <PackageId>kVersioningUtil</PackageId>
     <Title>kVersioningUtil</Title>
     <Description>a commandline application that helps version in build pipelines</Description>

@@ -6,6 +6,7 @@ using System.ComponentModel.Design.Serialization;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -22,7 +23,7 @@ namespace Versioning {
     /// well as a list of upcomming changes, that will lead to a new version.
     /// SAMPLE: CreateNewVersionOnChangelog "myPackage.nuspec" "changelog.md"
     /// NOTE: if you want to patch more than a single 'package.json' or '.nuspec' file,
-    /// then you need to use the 'CopyVersion' command afterwards (it supports minimatch-patterns)
+    /// then you need to use the 'ImportVersion' command afterwards (it supports minimatch-patterns)
     /// </summary>
     /// <param name="targetFile">
     /// a single file name, which can be 
@@ -114,16 +115,16 @@ namespace Versioning {
         using (FileStream fs = new FileStream(targetFile, FileMode.Create, FileAccess.Write)) {
           using (StreamWriter sw = new StreamWriter(fs, Encoding.Default)) {
             sw.WriteLine("{");
-            sw.WriteLine($"  \"currentVersion\": \"{info.currentVersion}\"");
-            sw.WriteLine($"  \"currentVersionWithSuffix\": \"{info.currentVersionWithSuffix}\"");
-            sw.WriteLine($"  \"releaseType\": \"{info.preReleaseSuffix}\"");
-            sw.WriteLine($"  \"previousVersion\": \"{info.previousVersion}\"");
-            sw.WriteLine($"  \"changeGrade\": \"{info.changeGrade}\"");
-            sw.WriteLine($"  \"currentMajor\": {info.currentMajor}");
-            sw.WriteLine($"  \"currentMinor\": {info.currentMinor}");
-            sw.WriteLine($"  \"currentPatch\": {info.currentFix}");
-            sw.WriteLine($"  \"versionDateInfo\": \"{info.versionDateInfo}\"");
-            sw.WriteLine($"  \"versionTimeInfo\": \"{info.versionTimeInfo}\"");
+            sw.WriteLine($"  \"currentVersion\": \"{info.currentVersion}\",");
+            sw.WriteLine($"  \"currentVersionWithSuffix\": \"{info.currentVersionWithSuffix}\",");
+            sw.WriteLine($"  \"releaseType\": \"{info.preReleaseSuffix}\",");
+            sw.WriteLine($"  \"previousVersion\": \"{info.previousVersion}\",");
+            sw.WriteLine($"  \"changeGrade\": \"{info.changeGrade}\",");
+            sw.WriteLine($"  \"currentMajor\": {info.currentMajor},");
+            sw.WriteLine($"  \"currentMinor\": {info.currentMinor},");
+            sw.WriteLine($"  \"currentPatch\": {info.currentFix},");
+            sw.WriteLine($"  \"versionDateInfo\": \"{info.versionDateInfo}\",");
+            sw.WriteLine($"  \"versionTimeInfo\": \"{info.versionTimeInfo}\",");
             sw.WriteLine($"  \"versionNotes\": \"{info.versionNotes.Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"")}\"");
             sw.WriteLine("}");
             sw.Flush();
@@ -167,108 +168,6 @@ namespace Versioning {
           Console.WriteLine(ex.Message);
         }
       }
-    }
-
-    /// <summary>
-    /// You can use this method to test you minimatch patterns...
-    /// </summary>
-    /// <param name="minimatchPatterns"></param>
-    /// <returns></returns>
-    public string[] ListFiles(string minimatchPatterns) {
-
-      //IF CALLED WITH SINGLE FILE
-      if(!minimatchPatterns.Contains("*") && !minimatchPatterns.Contains(";") && !minimatchPatterns.Contains("!")) {
-        if (!Path.IsPathRooted(minimatchPatterns)) {
-          minimatchPatterns = Path.Combine(Environment.CurrentDirectory, minimatchPatterns);
-        }
-        minimatchPatterns = Path.GetFullPath(minimatchPatterns);       
-        if (File.Exists(minimatchPatterns)) {
-          Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... OK");
-          return new string[] {minimatchPatterns};
-        }
-        else {
-          Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... not found !");
-          return new string[] { };
-        }
-      }
-
-      IEnumerable<string> result = new string[] { };
-      var opt = new Options();
-      opt.NoCase = true;
-
-      var patterns = minimatchPatterns.Split(";");
-
-      foreach (var pattern in patterns.Where((p) => !p.StartsWith("!"))) {
-        var cleaned = pattern.Replace("/", "\\");
-
-        string startDir = "";
-        string dynamicSubPath = "";
-
-        if (!Path.IsPathRooted(cleaned)) {
-          cleaned = Path.Combine(Environment.CurrentDirectory, cleaned);     
-        }
-
-        int idxFirstStar = cleaned.IndexOf("*");
-
-        if (idxFirstStar < 0) {
-          startDir = Path.GetDirectoryName(cleaned);
-          dynamicSubPath = Path.GetFileName(cleaned);
-        }
-        else {
-          int sepIdx = cleaned.Substring(0, idxFirstStar).LastIndexOf(Path.DirectorySeparatorChar);
-          startDir = cleaned.Substring(0, sepIdx);
-          dynamicSubPath = cleaned.Substring(sepIdx + 1);
-        }
-        //normalize
-        startDir = Path.GetFullPath(startDir);
-        int startDirLength = startDir.Length + 1;
-
-        Console.WriteLine($"Search on '{startDir}' for '{dynamicSubPath}'");
-
-        DirectoryInfo di = new DirectoryInfo(startDir);
-        var fileFullNames = di.GetFiles("*.*", searchOption: SearchOption.AllDirectories).Select(
-          (fi) => fi.FullName.Substring(startDirLength).Replace("\\", "/")
-        ).ToArray();
-
-        result = result.Union(Minimatcher.Filter(fileFullNames, dynamicSubPath.Replace("\\", "/"), opt).Select(
-          (matchFileName) => Path.Combine(startDir, matchFileName.Replace("/","\\"))
-        ));
-
-      }
-
-      result = result.Distinct();
-
-      foreach (var pattern in patterns.Where((p) => p.StartsWith("!"))) {
-        var cleaned = pattern.Replace("/", "\\").Substring(1);//remove the "!"
-
-        Console.WriteLine($"Removing matches for '{cleaned}'");
-
-        if (!Path.IsPathRooted(cleaned)) {
-          cleaned = Path.Combine(Environment.CurrentDirectory, cleaned);
-        }
-        int idxFirstStar = cleaned.IndexOf("*");
-        if (idxFirstStar < 0) {
-          //normalize
-          cleaned = Path.GetFullPath(cleaned);
-        }
-        else {
-          string startDir = "";
-          string dynamicSubPath = "";
-          int sepIdx = cleaned.Substring(0, idxFirstStar).LastIndexOf(Path.DirectorySeparatorChar);
-          startDir = cleaned.Substring(0, sepIdx);
-          dynamicSubPath = cleaned.Substring(sepIdx + 1);
-          //normalize
-          startDir = Path.GetFullPath(startDir);
-          cleaned = Path.Combine (startDir, dynamicSubPath);
-        }
-
-        string pat = "!" + cleaned.Replace("\\", "/");
-        result = result.Where( //             (our results are fully rooted VVVVV remove workdir to match in the seldom case, taht the pattern donst starts with **\)
-          (f) => Minimatcher.Check(f.Replace(Environment.CurrentDirectory + "\\","").Replace("\\","/"), pat, opt)
-        );
-      }
-
-      return result.ToArray(); 
     }
 
     /// <summary>
@@ -348,7 +247,7 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// SAMPLE: CopyVersion "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;" "myLib.nuspec" 
+    /// SAMPLE: ImportVersion "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;" "myLib.nuspec" 
     /// </summary>
     /// <param name="metaDataSourceFile">
     /// a single file name, which can be 
@@ -363,7 +262,7 @@ namespace Versioning {
     /// '.vbproj'/'.csproj' files in .net CORE project format OR
     /// 'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
     /// </param>
-    public void CopyVersion(
+    public void ImportVersion(
       string targetFilesToProcess,
       string metaDataSourceFile = "versioninfo.json"
     ) {
@@ -432,6 +331,145 @@ namespace Versioning {
       throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Just reads the version information out of a given file and prints it to the console
+    /// </summary>
+    /// <param name="metaDataSourceFile"></param>
+    public void ReadVersion(string metaDataSourceFile = "versioninfo.json") {
+      try {
+        IVersionContainer tgt = InitializeVersionContainerByFileType(metaDataSourceFile);
+        VersionInfo vers = tgt.ReadVersion();
+
+        Console.WriteLine();
+        Console.WriteLine($"  current version (w suffix): {vers.currentVersionWithSuffix}");
+        Console.WriteLine($"  current version:            {vers.currentVersion}");
+
+        if(!string.IsNullOrWhiteSpace (vers.previousVersion) && vers.previousVersion != "0.0.0") {
+          Console.WriteLine();
+          Console.WriteLine($"  previous version:           {vers.previousVersion}");
+          Console.WriteLine($"  change grade:               {vers.changeGrade}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(vers.versionDateInfo) && vers.versionDateInfo != "1900-01-01") {
+          Console.WriteLine();
+          Console.WriteLine($"  date:                       {vers.versionDateInfo}");
+          Console.WriteLine($"  time:                       {vers.versionTimeInfo}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(vers.versionNotes)) {
+          Console.WriteLine();
+          Console.WriteLine($"  version notes:");
+          Console.WriteLine($"  {vers.versionNotes.Replace(Environment.NewLine, Environment.NewLine + "  ")}");
+        }
+
+      }   
+      catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+      }
+    }
+
+    /// <summary>
+    /// You can use this method to test you minimatch patterns...
+    /// </summary>
+    /// <param name="minimatchPatterns"></param>
+    /// <returns></returns>
+    public string[] ListFiles(string minimatchPatterns) {
+
+      //IF CALLED WITH SINGLE FILE
+      if (!minimatchPatterns.Contains("*") && !minimatchPatterns.Contains(";") && !minimatchPatterns.Contains("!")) {
+        if (!Path.IsPathRooted(minimatchPatterns)) {
+          minimatchPatterns = Path.Combine(Environment.CurrentDirectory, minimatchPatterns);
+        }
+        minimatchPatterns = Path.GetFullPath(minimatchPatterns);
+        if (File.Exists(minimatchPatterns)) {
+          Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... OK");
+          return new string[] { minimatchPatterns };
+        }
+        else {
+          Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... not found !");
+          return new string[] { };
+        }
+      }
+
+      IEnumerable<string> result = new string[] { };
+      var opt = new Options();
+      opt.NoCase = true;
+
+      var patterns = minimatchPatterns.Split(";");
+
+      foreach (var pattern in patterns.Where((p) => !p.StartsWith("!"))) {
+        var cleaned = pattern.Replace("/", "\\");
+
+        string startDir = "";
+        string dynamicSubPath = "";
+
+        if (!Path.IsPathRooted(cleaned)) {
+          cleaned = Path.Combine(Environment.CurrentDirectory, cleaned);
+        }
+
+        int idxFirstStar = cleaned.IndexOf("*");
+
+        if (idxFirstStar < 0) {
+          startDir = Path.GetDirectoryName(cleaned);
+          dynamicSubPath = Path.GetFileName(cleaned);
+        }
+        else {
+          int sepIdx = cleaned.Substring(0, idxFirstStar).LastIndexOf(Path.DirectorySeparatorChar);
+          startDir = cleaned.Substring(0, sepIdx);
+          dynamicSubPath = cleaned.Substring(sepIdx + 1);
+        }
+        //normalize
+        startDir = Path.GetFullPath(startDir);
+        int startDirLength = startDir.Length + 1;
+
+        Console.WriteLine($"Search on '{startDir}' for '{dynamicSubPath}'");
+
+        DirectoryInfo di = new DirectoryInfo(startDir);
+        var fileFullNames = di.GetFiles("*.*", searchOption: SearchOption.AllDirectories).Select(
+          (fi) => fi.FullName.Substring(startDirLength).Replace("\\", "/")
+        ).ToArray();
+
+        result = result.Union(Minimatcher.Filter(fileFullNames, dynamicSubPath.Replace("\\", "/"), opt).Select(
+          (matchFileName) => Path.Combine(startDir, matchFileName.Replace("/", "\\"))
+        ));
+
+      }
+
+      result = result.Distinct();
+
+      foreach (var pattern in patterns.Where((p) => p.StartsWith("!"))) {
+        var cleaned = pattern.Replace("/", "\\").Substring(1);//remove the "!"
+
+        Console.WriteLine($"Removing matches for '{cleaned}'");
+
+        if (!Path.IsPathRooted(cleaned)) {
+          cleaned = Path.Combine(Environment.CurrentDirectory, cleaned);
+        }
+        int idxFirstStar = cleaned.IndexOf("*");
+        if (idxFirstStar < 0) {
+          //normalize
+          cleaned = Path.GetFullPath(cleaned);
+        }
+        else {
+          string startDir = "";
+          string dynamicSubPath = "";
+          int sepIdx = cleaned.Substring(0, idxFirstStar).LastIndexOf(Path.DirectorySeparatorChar);
+          startDir = cleaned.Substring(0, sepIdx);
+          dynamicSubPath = cleaned.Substring(sepIdx + 1);
+          //normalize
+          startDir = Path.GetFullPath(startDir);
+          cleaned = Path.Combine(startDir, dynamicSubPath);
+        }
+
+        string pat = "!" + cleaned.Replace("\\", "/");
+        result = result.Where( //             (our results are fully rooted VVVVV remove workdir to match in the seldom case, taht the pattern donst starts with **\)
+          (f) => Minimatcher.Check(f.Replace(Environment.CurrentDirectory + "\\", "").Replace("\\", "/"), pat, opt)
+        );
+      }
+
+      return result.ToArray();
+    }
+
     #region " INTERNAL HELPERS "
 
     /// <summary>
@@ -476,7 +514,7 @@ namespace Versioning {
       return -1;
     }
 
-    public bool MatchesWildcardMask(string stringToEvaluate, string pattern, bool ignoreCasing = true) {
+    internal bool MatchesWildcardMask(string stringToEvaluate, string pattern, bool ignoreCasing = true) {
       var indexOfDoubleDot = pattern.IndexOf("..", StringComparison.Ordinal);
       if ((indexOfDoubleDot >= 0)) {
         for (var i = indexOfDoubleDot; i <= pattern.Length - 1; i++) {
@@ -558,8 +596,11 @@ namespace Versioning {
 
     private static VersionInfo ProcessMarkdownAndCreateNewVersion(List<string> allLines, string preReleaseSemantic = "") {
       var versionInfo = new VersionInfo();
+      versionInfo.changeGrade = "fix";
+      versionInfo.versionDateInfo = DateTime.Now.ToString("yyyy-MM-dd");
+      versionInfo.versionTimeInfo = DateTime.Now.ToString("HH:mm:ss");
 
-      versionInfo.preReleaseSuffix = "official";
+      versionInfo.preReleaseSuffix = "";
       if (!string.IsNullOrWhiteSpace(preReleaseSemantic)) {
         versionInfo.preReleaseSuffix = preReleaseSemantic.Trim().ToLower();
       }
@@ -779,7 +820,7 @@ namespace Versioning {
       //neuen version setzen
       allLines.Insert(upcommingChangesIndex + 1, $"released **{versionInfo.versionDateInfo}**, including:");
 
-      if (versionInfo.preReleaseSuffix == "official") {
+      if (versionInfo.preReleaseSuffix == "") {
 
         //upcomming wird zu release
         allLines[upcommingChangesIndex] = releasedVersionMarker.TrimEnd() + $" {currentVersion.ToString(3)}";
@@ -803,7 +844,24 @@ namespace Versioning {
       return versionInfo;
     }
 
-    private static IVersionContainer InitializeVersionContainerByFileType(string fileFullName) {
+    private IVersionContainer InitializeVersionContainerByFileType(string fileFullName) {
+
+      if (fileFullName.Contains("*")) {
+        var matches = this.ListFiles(fileFullName);
+        if (matches.Length == 0) {
+          throw new FileNotFoundException($"There is no file matching the pattern '{fileFullName}'");
+        }
+        else if (matches.Length > 1) {
+          throw new Exception($"There is more than one file matching the pattern '{fileFullName}'. Please concretize the pattern to choose between '{string.Join("' / '", matches)}')");
+        }
+        else {
+          fileFullName = matches[0];
+        }
+      }
+      else {
+        fileFullName = Path.GetFullPath(fileFullName);
+      }
+
       if (fileFullName.Equals("package.json", StringComparison.InvariantCultureIgnoreCase)) {
         return new NpmPackageJsonFileAccessor(fileFullName);
       }
@@ -818,6 +876,9 @@ namespace Versioning {
       }
       else if (fileFullName.EndsWith(".nuspec", StringComparison.InvariantCultureIgnoreCase)) {
         return new NuspecFileAccessor(fileFullName);
+      }
+      else if (fileFullName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) || fileFullName.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase)) {
+        return new CompiledAssembyFileAccessor(fileFullName);
       }
       return null;
     }

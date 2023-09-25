@@ -12,7 +12,7 @@ namespace FileIO {
     private JsonSerializerOptions _JsonOpt = new JsonSerializerOptions();
   
     public VersionInfoJsonFileAccessor(string fileFullName) {
-      _FileFullName = fileFullName;
+      _FileFullName = Path.GetFullPath(fileFullName);
       _JsonOpt.PropertyNameCaseInsensitive = true;
       _JsonOpt.IncludeFields = true;
       _JsonOpt.WriteIndented = true;

@@ -13,7 +13,7 @@ namespace FileIO {
     private string _FileFullName;
 
     public NpmPackageJsonFileAccessor(string fileFullName) {
-      _FileFullName = fileFullName;
+      _FileFullName = Path.GetFullPath(fileFullName);
       if (!File.Exists(fileFullName)) {
         throw new FileNotFoundException("Could not find File: " + fileFullName);
       }
