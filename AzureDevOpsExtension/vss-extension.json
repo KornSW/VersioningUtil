@@ -1,0 +1,73 @@
+{
+  "manifestVersion": 1,
+  "id": "kVersioningUtil",
+  "name": "kVersioningUtil",
+  "version": "1.0.0",
+  "publisher": "KornSW",
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "description": "A build task that can read and write version information, supporting project-files, assemblyinfo-files, package.json, .nuspec and compiled assemblies (RO).",
+  "categories": [
+    "Azure Pipelines"
+  ],
+  "tags": [
+    "AssemblyInfo",
+    "package.json",
+    "nuspec",
+    "Version"
+  ],
+  "icons": {
+    "default": "images/extension-icon.png"
+  },
+  "files": [
+    {
+      "path": "KvuTask"
+    }
+  ],
+  "content": {
+    "details": {
+      "path": "readme.md"
+    },
+    "license": {
+      "path": "license"
+    }
+  },
+  "links": {
+    "getstarted": {
+      "uri": "https://github.com/KornSW/VersioningUtil"
+    },
+    "support": {
+      "uri": "https://github.com/KornSW/VersioningUtil/issues"
+    }
+  },
+  "screenshots": [
+    {
+      "path": "images/screenshot1.png"
+    },
+    {
+      "path": "images/screenshot2.png"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "uri": "https://github.com/KornSW/VersioningUtil"
+  },
+  "galleryFlags": [
+    "Public"
+  ],
+  "contributions": [
+    {
+      "id": "k-versioning-util",
+      "type": "k-versioning-util.task",
+      "targets": [
+        "ms.vss-distributed-task.tasks"
+      ],
+      "properties": {
+        "name": "kVersioningUtil"
+      }
+    }
+  ]
+}
