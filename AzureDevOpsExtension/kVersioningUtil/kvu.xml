@@ -1,0 +1,298 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>kvu</name>
+    </assembly>
+    <members>
+        <member name="M:Versioning.KVersioningHelper.CreateNewVersionOnChangelog(System.String,System.String,System.String,System.String)">
+            <summary>
+            Uses a given changeLogFile a leading database to store the current version of an product as
+            well as a list of upcomming changes, that will lead to a new version.
+            SAMPLE: CreateNewVersionOnChangelog "myPackage.nuspec" "changelog.md"
+            NOTE: if you want to patch more than a single 'package.json' or '.nuspec' file,
+            then you need to use the 'ImportVersion' command afterwards (it supports minimatch-patterns)
+            </summary>
+            <param name="targetFile">
+            a single file name, which can be 
+            a 'package.json' file in NPM format (must exist and will be patched) OR
+            a '.nuspec' file in NuGetFormat (must exist and will be patched) OR
+            any '.json' filename (will be overwritten!) using a simple json structure defined by this tool
+            </param>
+            <param name="changeLogFile">
+            A 'changelog.md' file, that has a special structure (the initial one will be created automatically!)
+            </param>
+            <param name="preReleaseSemantic">
+            if specified, the versioning logic will create a so called 'prerelease' using the given string a semantical label
+            </param>
+            <param name="ignoreSemantic">
+            can be used to define a blacklist of semantical names, that should NOT be treated as pre-release.
+            This is very helpfull, if youre using this tool inside of a build-pipeline and passing the branch-name to the
+            preReleaseSemantic parameter. Then youll be able to declare that branch names via ignoreSemantic parameter,
+            which are representing regular releases!
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.ReplaceVersionPlaceholders(System.String,System.String)">
+            <summary>
+            SAMPLE: ReplaceVersionPlaceholders "**\\*.html;**\\*.md" "mylib.nuspec"
+            </summary>
+            <param name="metaDataSourceFile">
+            a single file name, which can be 
+            a 'package.json' file in NPM format OR
+            a '.nuspec' file in NuGetFormat OR
+            a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
+            </param>
+            <param name="targetFilesToProcess">
+            multiple minimatch-patterns (separated by ;) to address one or more
+            plaintext based files containing version-placeholders like:
+            {currentVersion}, {currentVersionWithSuffix}, ...
+            (take a look at the metaDataDumpFile to see all keys!)
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.IncreaseVersion(System.Int32,System.String)">
+            <summary>
+            SAMPLE: IncreaseVersion 1 "**\\*.nuspec;**\\package.json;!**\\node_modules\\*"
+            </summary>
+            <param name="majority">defines, which digit of the semantic version should be increased (1=MAJOR,2=MINOR,3=FIX)</param>
+            <param name="targetFilesToProcess">
+            multiple minimatch-patterns (separated by ;) to address one or more
+            'package.json' files in NPM format OR
+            '.nuspec' files in NuGetFormat OR
+            '.vbproj'/'.csproj' files in .net CORE project format OR
+            'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.SetVersion(System.String,System.String)">
+            <summary>
+            SAMPLE: SetVersion "1.2.3-alpha" "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;"
+            </summary>
+            <param name="semanticVersion">
+              can also contain a suffix like '-prerelease'
+            </param>
+            <param name="targetFilesToProcess">
+            multiple minimatch-patterns (separated by ;) to address one or more
+            'package.json' files in NPM format OR
+            '.nuspec' files in NuGetFormat OR
+            '.vbproj'/'.csproj' files in .net CORE project format OR
+            'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.ImportVersion(System.String,System.String)">
+            <summary>
+            SAMPLE: ImportVersion "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;" "myLib.nuspec" 
+            </summary>
+            <param name="metaDataSourceFile">
+            a single file name, which can be 
+            a 'package.json' file in NPM format OR
+            a '.nuspec' file in NuGetFormat OR
+            a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
+            </param>
+            <param name="targetFilesToProcess">
+            multiple minimatch-patterns (separated by ;) to address one or more
+            'package.json' files in NPM format OR
+            '.nuspec' files in NuGetFormat OR
+            '.vbproj'/'.csproj' files in .net CORE project format OR
+            'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.SetVersionToRefEntry(System.String,System.String,System.String)">
+            <summary>
+            SAMPLE: SetVersionToRefEntry "GreatExternalLib" "1.2.3-alpha" "**\*.nuspec;**\package.json;!**\node_modules\**"
+            </summary>
+            <param name="refPackageId">
+            </param>
+            <param name="semanticVersion">
+              can also contain a suffix like '-prerelease'
+            </param>
+            <param name="targetFilesToProcess">
+            multiple minimatch-patterns (separated by ;) to address one or more
+            'package.json' files in NPM format OR
+            '.nuspec' files in NuGetFormat
+            WARNING: '.vbproj'/'.csproj' files in .net CORE project format ARE CURRENTLY NOT SUPPORTED!
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.CopyVersionToRefEntry(System.String,System.String,System.String)">
+            <summary>
+            SAMPLE: CopyVersionToRefEntry "MyLib" "**\*.nuspec;**\package.json;!**\node_modules\**" "myLib.nuspec"
+            </summary>
+            <param name="refPackageId">
+            </param>
+            <param name="metaDataSourceFile">
+            a single file name, which can be 
+            a 'package.json' file in NPM format OR
+            a '.nuspec' file in NuGetFormat OR
+            a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
+            </param>
+            <param name="targetFilesToProcess">
+            multiple minimatch-patterns (separated by ;) to address one or more
+            'package.json' files in NPM format OR
+            '.nuspec' files in NuGetFormat
+            WARNING: '.vbproj'/'.csproj' files in .net CORE project format ARE CURRENTLY NOT SUPPORTED!
+            </param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.ReadVersion(System.String)">
+            <summary>
+            Just reads the version information out of a given file and prints it to the console
+            </summary>
+            <param name="metaDataSourceFile"></param>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.ListFiles(System.String)">
+            <summary>
+            You can use this method to test you minimatch patterns...
+            </summary>
+            <param name="minimatchPatterns"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Versioning.KVersioningHelper.VersionCompare(System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            ma1 more than ma2:  1
+            ma1 less then ma2: -1
+            </summary>
+            <param name="ma1"></param>
+            <param name="mi1"></param>
+            <param name="p1"></param>
+            <param name="ma2"></param>
+            <param name="mi2"></param>
+            <param name="p2"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Versioning.VersionInfo.IncreaseCurrentMajor(System.Boolean,System.Boolean)">
+            <summary>
+             increases currentMajor AND sets currentMinor+currentPatch to ZERO
+            </summary>
+        </member>
+        <member name="M:Versioning.VersionInfo.IncreaseCurrentMinor(System.Boolean)">
+            <summary>
+             increases currentMinor AND sets currentPatch to ZERO
+            </summary>
+        </member>
+        <member name="M:Versioning.VersionInfo.IncreaseCurrentFix(System.Boolean)">
+            <summary>
+             increases currentPatch
+            </summary>
+        </member>
+        <member name="T:Utils.Options">
+            <summary>Contains options that control how Minimatch matches strings.</summary>
+        </member>
+        <member name="P:Utils.Options.NoComment">
+            <summary>Suppresses the behavior of treating # at the start of a pattern as a comment.</summary>
+        </member>
+        <member name="P:Utils.Options.NoNegate">
+            <summary>Suppresses the behavior of treating a leading ! character as negation.</summary>
+        </member>
+        <member name="P:Utils.Options.NoBrace">
+            <summary>Do not expand {a,b} and {1.3} brace sets.</summary>
+        </member>
+        <member name="P:Utils.Options.NoGlobStar">
+            <summary>Disable ** matching against multiple folder names.</summary>
+        </member>
+        <member name="P:Utils.Options.NoCase">
+            <summary>Ignores case differences when matching.</summary>
+        </member>
+        <member name="P:Utils.Options.NoExt">
+            <summary>Disable "extglob" style patterns like <c>+(a|b)</c>.</summary>
+        </member>
+        <member name="P:Utils.Options.Dot">
+            <summary>Allow patterns to match filenames starting with a period, even if the pattern does not explicitly have a period in that spot.
+            Note that by default, <c>a/**/b</c>  will not match <c>a/.d/b</c>, unless dot is set.</summary>
+        </member>
+        <member name="P:Utils.Options.NoNull">
+            <summary>When a match is not found by Match(), return a list containing the pattern itself. If not set, an empty list is returned if there are no matches.</summary>
+        </member>
+        <member name="P:Utils.Options.FlipNegate">
+            <summary>Returns from negate expressions the same as if they were not negated. (ie, true on a hit, false on a miss).</summary>
+        </member>
+        <member name="P:Utils.Options.MatchBase">
+            <summary>If set, then patterns without slashes will be matched against the basename of the path if it contains slashes. For example, <c>a?b</c> would match the path <c>/xyz/123/acb</c>, but not <c>/xyz/acb/123</c>.</summary>
+        </member>
+        <member name="P:Utils.Options.AllowWindowsPaths">
+            <summary>If true, backslahes in patterns and paths will be treated as forward slashes.  This disables escape characters.</summary>
+        </member>
+        <member name="P:Utils.Options.IgnoreCase">
+            <summary>Ignores case differences when matching.  This is the same as NoCase.</summary>
+        </member>
+        <member name="T:Utils.Minimatcher">
+            <summary>Parses a single glob pattern and tests strings against it.</summary>
+        </member>
+        <member name="M:Utils.Minimatcher.CreateFilter(System.String,Utils.Options)">
+            <summary>Creates a filter function that tests input against a pattern.</summary>
+        </member>
+        <member name="M:Utils.Minimatcher.Check(System.String,System.String,Utils.Options)">
+            <summary>Tests a single input against a pattern.</summary>
+            <remarks>This function reparses this input on each invocation.  For performance, avoid this function and reuse a Minimatcher instance instead.</remarks>
+        </member>
+        <member name="M:Utils.Minimatcher.Filter(System.Collections.Generic.IEnumerable{System.String},System.String,Utils.Options)">
+            <summary>Filters a list of inputs against a single pattern.</summary>
+            <remarks>This function reparses this input on each invocation.  For performance, avoid this function and reuse a Minimatcher instance instead.</remarks>
+        </member>
+        <member name="M:Utils.Minimatcher.CreateRegex(System.String,Utils.Options)">
+            <summary>Compiles a pattern into a single regular expression.</summary>
+        </member>
+        <member name="M:Utils.Minimatcher.#ctor(System.String,Utils.Options)">
+            <summary>Creates a new Minimatcher instance, parsing the pattern into a regex.</summary>
+        </member>
+        <member name="M:Utils.Minimatcher.IsMatch(System.String)">
+            <summary>Checks whether a given string matches this pattern.</summary>
+        </member>
+        <member name="M:Utils.Minimatcher.Filter(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Filters a list of inputs against this pattern.</summary>
+        </member>
+        <member name="M:Utils.Minimatcher.BraceExpand(System.String,Utils.Options)">
+            <summary>Expands all brace ranges in a pattern, returning a sequence containing every possible combination.</summary>
+        </member>
+        <member name="P:Utils.CommandLineParser.Item(System.String)">
+            <summary>
+             Returns the argument matching the specified name. If na argument was found,
+             nothing will be returned.
+            </summary>
+        </member>
+        <member name="M:Utils.CommandLineParser.Dispose(System.Boolean)">
+            <summary>
+              ''' Dispose the current object instance
+              ''' </summary>
+        </member>
+        <member name="M:Utils.CommandLineParser.Dispose">
+            <summary>
+              ''' Dispose the current object instance and suppress the finalizer
+              ''' </summary>
+        </member>
+        <member name="M:Utils.ConsoleAdapter.FoistOutput(System.String,System.Boolean,System.ConsoleColor)">
+            <summary>
+                ''' Used to insert logging output from other threads into the console without corrupting the current input...
+                ''' </summary>
+        </member>
+        <member name="M:Utils.ConsoleAdapter.Dispose(System.Boolean)">
+            <summary>
+                ''' Dispose the current object instance
+                ''' </summary>
+        </member>
+        <member name="M:Utils.ConsoleAdapter.Dispose">
+            <summary>
+                ''' Dispose the current object instance and suppress the finalizer
+                ''' </summary>
+        </member>
+        <member name="T:System.Reflection.XmlCommentAccessExtensions">
+            <summary> extension methods to read summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Type,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Reflection.PropertyInfo,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Reflection.MethodInfo,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Reflection.FieldInfo,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Reflection.EventInfo,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Reflection.ParameterInfo,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+        <member name="M:System.Reflection.XmlCommentAccessExtensions.GetDocumentation(System.Reflection.MemberInfo,System.Boolean)">
+            <summary> reads summary and parameter documentation from the xml-file (if exsists) </summary>
+        </member>
+    </members>
+</doc>

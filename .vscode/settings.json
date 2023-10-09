@@ -1,0 +1,25 @@
+{
+  "favorites.resources": [
+    {
+      "filePath": "AzureDevOpsExtension\\KvuTask\\KvuTaskV1\\task.json",
+      "group": "Default"
+    },
+    {
+      "filePath": "AzureDevOpsExtension\\KvuTask\\KvuTaskV1\\CreateNewVersionOnChangelog.ps1",
+      "group": "Default"
+    },
+    {
+      "filePath": "AzureDevOpsExtension\\vss-extension.json",
+      "group": "Default"
+    },
+    {
+      "filePath": "AzureDevOpsExtension\\kVersioningUtil\\task.json",
+      "group": "Default"
+    },
+    {
+      "filePath": "AzureDevOpsExtension\\kVersioningUtil\\CreateNewVersionOnChangelog.ps1",
+      "group": "Default"
+    }
+  ],
+  "favorites.sortOrder": "MANUAL"
+}

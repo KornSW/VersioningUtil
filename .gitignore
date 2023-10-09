@@ -68,7 +68,6 @@ StyleCopReport.xml
 *.obj
 *.iobj
 *.pch
-*.pdb
 *.ipdb
 *.pgc
 *.pgd
@@ -338,3 +337,9 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
+#own artifacts
+AzureDevOpsExtension/**/versioninfo.json
+AzureDevOpsExtension/**/changelog.md
+AzureDevOpsExtension/*.vsix
+AzureDevOpsExtension/**/*.lnk

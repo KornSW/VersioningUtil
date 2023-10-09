@@ -1,0 +1,56 @@
+{
+  "id": "02F7CF78-BC11-7DBC-4858-4C618D33D858",
+  "name": "kVersioningUtil",
+  "friendlyName": "kVersioningUtil CreateNewVersionOnChangelog",
+  "description": "Increase Version on changelog.md",
+  "helpMarkDown": "",
+  "category": "Utility",
+  "author": "KornSW",
+  "version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 1
+  },
+  "instanceNameFormat": "CreateNewVersionOnChangelog $(changeLogFile)",
+  "inputs": [
+    {
+        "name": "targetFile",
+        "type": "filePath",
+        "label": "TargetFile",
+        "defaultValue": "versioninfo.json",
+        "helpMarkDown": "The target file, where the version metadata should be written in...",
+        "required": true
+    },
+    {
+        "name": "changeLogFile",
+        "type": "filePath",
+        "label": "ChangeLogFile",
+        "defaultValue": "changelog.md",
+        "helpMarkDown": "The Changelog file (MD) which acts as database",
+        "required":  true
+    },
+    {
+        "name": "preReleaseSemantic",
+        "type": "string",
+        "label": "PreReleaseSemantic",
+        "defaultValue": "",
+        "helpMarkDown": "Could be '$(Build.SourceBranchName)', to use the branch name as prerelease suffix (if not whitelisted)",
+        "required":  false
+    },
+    {
+        "name": "ignoreSemantic",
+        "type": "string",
+        "label": "PreReleaseSemantic (whitelist)",
+        "defaultValue": "master;main;rel-*",
+        "helpMarkDown": "List of names, that a not treated to have the semantic of a pre-release",
+        "required":  false
+    }
+  ],
+  "execution": {
+    "PowerShell3": {
+      "target": "$(currentDirectory)\\CreateNewVersionOnChangelog.ps1",
+      "argumentFormat": "",
+      "workingDirectory": ""
+    }
+  }
+}

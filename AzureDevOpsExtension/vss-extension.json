@@ -2,8 +2,9 @@
   "manifestVersion": 1,
   "id": "kVersioningUtil",
   "name": "kVersioningUtil",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "publisher": "KornSW",
+  "public": true,
   "targets": [
     {
       "id": "Microsoft.VisualStudio.Services"
@@ -24,7 +25,7 @@
   },
   "files": [
     {
-      "path": "KvuTask"
+      "path": "kVersioningUtil"
     }
   ],
   "content": {

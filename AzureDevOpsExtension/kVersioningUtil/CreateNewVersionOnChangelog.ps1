@@ -70,47 +70,57 @@ function ReadAndSetAssemblyVariables([string]$content, [string]$regexExpression)
 # $searchPattern = Get-VstsTaskVariable -Name 'searchPattern' -Require
 # $variablesPrefix = Get-VstsTaskVariable -Name 'variablesPrefix'
 
-$searchPattern = Get-VstsInput -Name 'searchPattern' -Require
-$variablesPrefix = Get-VstsInput -Name 'variablesPrefix'
+#$searchPattern = Get-VstsInput -Name 'targetFile' -Require
+$targetFile = Get-VstsInput -Name 'targetFile' -Require
+$changeLogFile = Get-VstsInput -Name 'changeLogFile' -Require
+$preReleaseSemantic = Get-VstsInput -Name 'preReleaseSemantic'
+$ignoreSemantic = Get-VstsInput -Name 'ignoreSemantic'
 
 # Write all params to the console.
-Write-Host ("Search Pattern: " + $searchPattern)
-Write-Host ("Variables Prefix: " + $variablesPrefix)
+Write-Host ("TargetFile: " + $targetFile)
+Write-Host ("ChangeLogFile: " + $changeLogFile)
+Write-Host ("PreReleaseSemantic: " + $preReleaseSemantic)
+Write-Host ("IgnoreSemantic: " + $ignoreSemantic)
+
+$cmd = 'kvu.exe';
+$args = 'CreateNewVersionOnChangelog "' + $targetFile + '" "' + $changeLogFile + '" "' + $preReleaseSemantic + '" "' + $ignoreSemantic + '"';
+$output = cmd /c psftp.exe $args 2`>`&1
 
 # Pseudo-consts
-$csharpVbRegexExpression = '(?m)^\s*[\[\<]\s*[Aa]ssembly:\s*([\w\.]*)\(\s*@?"([^"]*)'
-$cobolRegexExpression = '(?mi)\s*\w*([Aa]ssembly\w*)\s*USING N"([^"]*)'
+#$csharpVbRegexExpression = '(?m)^\s*[\[\<]\s*[Aa]ssembly:\s*([\w\.]*)\(\s*@?"([^"]*)'
+#$cobolRegexExpression = '(?mi)\s*\w*([Aa]ssembly\w*)\s*USING N"([^"]*)'
 
-$filesFound = Get-ChildItem -Path $searchPattern -Recurse
+#$filesFound = Get-ChildItem -Path $searchPattern -Recurse
 
-if ($filesFound.Count -eq 0)
-{
-	Write-Warning ("No files matching pattern found.")
-}
+#if ($filesFound.Count -eq 0)
+#{
+#	Write-Warning ("No files matching pattern found.")
+#}
 
-if ($filesFound.Count -gt 1)
-{
-	Write-Warning ("Multiple assemblyinfo files found.")
-}
-
-foreach ($fileFound in $filesFound)
-{
-	Write-Host ("Reading file: " + $fileFound)
-	$fileText = [IO.File]::ReadAllText($fileFound)
+#if ($filesFound.Count -gt 1)
+#{
+#	Write-Warning ("Multiple assemblyinfo files found.")
+#}
+#
+#foreach ($fileFound in $filesFound)
+#{
+	#Write-Host ("Reading file: " + $fileFound)
+	#$fileText = [IO.File]::ReadAllText($fileFound)
 
 	# Determine which RegEx expression is appropriate for this file
-	$regexExpression = ''
-	if ($searchPattern.EndsWith(".cob", [System.StringComparison]::OrdinalIgnoreCase))
-	{
-		Write-Host("Using Cobol regex expression " + $cobolRegexExpression)
-		$regexExpression = $cobolRegexExpression
-	}
-	else
-	{
-		Write-Host("Using CSharp/VbNet regex expression " + $csharpVbRegexExpression)
-		$regexExpression = $csharpVbRegexExpression
-	}
+	#$regexExpression = ''
+	#if ($searchPattern.EndsWith(".cob", [System.StringComparison]::OrdinalIgnoreCase))
+	#{
+	#	Write-Host("Using Cobol regex expression " + $cobolRegexExpression)
+	#	$regexExpression = $cobolRegexExpression
+	#}
+	#else
+	#{
+	#	Write-Host("Using CSharp/VbNet regex expression " + $csharpVbRegexExpression)
+	#	$regexExpression = $csharpVbRegexExpression
+	#}
 
-	# Read assembly info from file content using the appropriate RegEx expression
-	ReadAndSetAssemblyVariables $fileText $regexExpression
-}
+	# TODO: read ouput file to build variable!
+	#ReadAndSetAssemblyVariables $fileText $regexExpression
+#}
+
