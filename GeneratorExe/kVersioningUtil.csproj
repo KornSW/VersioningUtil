@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,15 +6,16 @@
     <AssemblyName>kvu</AssemblyName>
     <RootNamespace>Versioning</RootNamespace>
     <ApplicationIcon>AppIcon.ico</ApplicationIcon>
-    <StartupObject>CodeGeneration.Program</StartupObject>
+    <StartupObject>Versioning.Program</StartupObject>
     <Authors>KornSW</Authors>
-    <Company>KornSW</Company>
-    <AssemblyVersion>1.5.0.0</AssemblyVersion>
-    <FileVersion>1.5.0.0</FileVersion>
-    <Version>1.0.0</Version>
+    <Company>OpenSouce (KornSW)</Company>
+    <AssemblyVersion>2.1.0.0</AssemblyVersion>
+    <FileVersion>2.1.0.0</FileVersion>
+    <Version>2.1.0</Version>
     <PackageId>kVersioningUtil</PackageId>
     <Title>kVersioningUtil</Title>
     <Description>a commandline application that helps version in build pipelines</Description>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -43,6 +44,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="(import from GitHub)\Minimatcher - Copy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <WCFMetadata Include="Connected Services" />
   </ItemGroup>
 
@@ -57,6 +62,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Connectors.tt</DependentUpon>
     </Compile>
+    <Compile Update="Utils\%28import from GitHub%29\Minimatcher.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Minimatcher.tt</DependentUpon>
+    </Compile>
     <Compile Update="Wrappers.Generated.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -65,6 +75,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Utils\(import from GitHub)\Minimatcher.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Minimatcher.cs</LastGenOutput>
+    </None>
     <None Update="Connectors.tt">
       <LastGenOutput>Connectors.Generated.cs</LastGenOutput>
       <Generator>TextTemplatingFileGenerator</Generator>

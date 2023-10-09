@@ -1,0 +1,7 @@
+das "KVersioningUtil" ist ein Kommandozeilentool, welches Versionsinformationen lesen und schreiben kann.
+
+es unterstützt:
+  AssemblyInfo.vb/.cs
+  .vbproj/.csproj (.net core)
+  .nuspec/package.json (npm) 
+  .dll/.exe (kompilierte assemblies -> nur lesend)
