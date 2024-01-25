@@ -54,6 +54,13 @@ namespace FileIO {
       }
     }
 
+    public void WritePackageDependencies(DependencyInfo[] readPackageDependencies, bool addNew, bool updateExisiting, bool deleteOthers) {
+    }
+
+    public DependencyInfo[] ReadPackageDependencies() {
+      return new DependencyInfo[] { };
+    }
+
   }
 
 }

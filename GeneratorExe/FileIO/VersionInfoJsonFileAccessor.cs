@@ -33,6 +33,13 @@ namespace FileIO {
       }
     }
 
+    public void WritePackageDependencies(DependencyInfo[] packageDependencies, bool addNew, bool updateExisiting, bool deleteOthers) {
+    }
+
+    public DependencyInfo[] ReadPackageDependencies() {
+      return new DependencyInfo[] { };
+    }
+
   }
 
 }

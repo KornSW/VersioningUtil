@@ -12,6 +12,13 @@ namespace FileIO {
 
     VersionInfo ReadVersion();
 
+    void WritePackageDependencies(
+      DependencyInfo[] packageDependencies,
+      bool addNew, bool updateExisiting, bool deleteOthers
+    );
+
+    DependencyInfo[] ReadPackageDependencies();
+
   }
 
 }

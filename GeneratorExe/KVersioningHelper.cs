@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -285,29 +286,41 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// SAMPLE: SetVersionToRefEntry "GreatExternalLib" "1.2.3-alpha" "**\*.nuspec;**\package.json;!**\node_modules\**"
+    /// reads a file and prints information about its dependencies
+    /// SAMPLE: ListDependencies "myLib.nuspec"
     /// </summary>
-    /// <param name="refPackageId">
-    /// </param>
-    /// <param name="semanticVersion">
-    ///   can also contain a suffix like '-prerelease'
-    /// </param>
-    /// <param name="targetFilesToProcess">
-    /// multiple minimatch-patterns (separated by ;) to address one or more
-    /// 'package.json' files in NPM format OR
-    /// '.nuspec' files in NuGetFormat
-    /// WARNING: '.vbproj'/'.csproj' files in .net CORE project format ARE CURRENTLY NOT SUPPORTED!
-    /// </param>
-    public void SetVersionToRefEntry(
-      string refPackageId,
-      string semanticVersion,
-      string targetFilesToProcess
+    /// <param name="fileToAnalyze"></param>
+    public void ListDependencies(
+      string fileToAnalyze
     ) {
-      throw new NotImplementedException();
+      try {
+        IVersionContainer tgt = InitializeVersionContainerByFileType(fileToAnalyze);
+        var deps = tgt.ReadPackageDependencies();
+        int len = 30;
+        foreach (var dep in deps) {
+          if(len < dep.TargetPackageId.Length) {
+            len = dep.TargetPackageId.Length;
+          }     
+        }
+        len = len + 2;
+        Console.WriteLine("---------------- DEPENDENCIES -----------------");
+        Console.WriteLine();
+        foreach (var dep in deps) {
+          Console.Write("  ");
+          Console.Write(dep.TargetPackageId);
+          Console.Write(new string(' ', len - dep.TargetPackageId.Length));
+          Console.WriteLine(dep.TargetPackageVersionConstraint);
+        }
+        Console.WriteLine();
+        Console.WriteLine("-----------------------------------------------");
+      }
+      catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+      }
     }
 
     /// <summary>
-    /// SAMPLE: CopyVersionToRefEntry "MyLib" "**\*.nuspec;**\package.json;!**\node_modules\**" "myLib.nuspec"
+    /// SAMPLE: CopyVersionToDependencyEntry "MyLib" "**\*.nuspec;**\package.json;!**\node_modules\**" "myLib.nuspec"
     /// </summary>
     /// <param name="refPackageId">
     /// </param>
@@ -323,12 +336,132 @@ namespace Versioning {
     /// '.nuspec' files in NuGetFormat
     /// WARNING: '.vbproj'/'.csproj' files in .net CORE project format ARE CURRENTLY NOT SUPPORTED!
     /// </param>
-    public void CopyVersionToRefEntry(
+    /// <param name="contraintType">
+    ///  "SEM-SAFE": require the given version or any newer, as long as the major version is the same;
+    ///  "MIN": require the given version or any newer (including new major versions;
+    ///  "EXACT": require exactly the given version  
+    /// </param> 
+    public void CopyVersionToDependencyEntry(
       string refPackageId,
       string targetFilesToProcess,
-      string metaDataSourceFile = "versioninfo.json"
+      string metaDataSourceFile = "versioninfo.json",
+      string contraintType = "SEM-SAFE"
     ) {
-      throw new NotImplementedException();
+      IVersionContainer src = InitializeVersionContainerByFileType(metaDataSourceFile);
+      if (src == null) {
+        Console.WriteLine("Invalid metaDataSourceFile '" + metaDataSourceFile + "'");
+        return;
+      }
+      VersionInfo vers = src.ReadVersion();
+      this.SetVersionToDependencyEntry(refPackageId, vers.currentVersionWithSuffix, targetFilesToProcess, contraintType);
+    }
+
+    /// <summary>
+    /// SAMPLE: SetVersionToDependencyEntry "GreatExternalLib" "1.2.3-alpha" "**\*.nuspec;**\package.json;!**\node_modules\**"
+    /// </summary>
+    /// <param name="dependencyPackageId">
+    /// </param>
+    /// <param name="newDependentVersion">
+    ///   can also contain a suffix like '-prerelease'
+    /// </param>
+    /// <param name="targetFilesToProcess">
+    /// multiple minimatch-patterns (separated by ;) to address one or more
+    /// 'package.json' files in NPM format OR
+    /// '.nuspec' files in NuGetFormat
+    /// </param>
+    /// <param name="contraintType">
+    ///  "SEM-SAFE": require the given version or any newer, as long as the major version is the same;
+    ///  "MIN": require the given version or any newer (including new major versions;
+    ///  "EXACT": require exactly the given version  
+    /// </param>
+    public void SetVersionToDependencyEntry(
+      string dependencyPackageId,
+      string newDependentVersion,
+      string targetFilesToProcess,
+      string contraintType = "SEM-SAFE"
+    ) {
+      DependencyInfo dep;
+      dep = new DependencyInfo(dependencyPackageId, newDependentVersion);
+      if (contraintType == "EXACT") {
+        dep.TargetPackageVersionConstraint.SetVersionShouldBeExact(newDependentVersion);
+      }
+      else if (contraintType == "MIN") {
+        dep.TargetPackageVersionConstraint.SetVersionShouldBeGreaterThanOrEqual(newDependentVersion);
+      }
+      else if (contraintType == "KEEP") {
+      }
+      else { //SEM-SAFE
+        dep.TargetPackageVersionConstraint.SetVersionShouldBeInNonBreakingRange(newDependentVersion);
+      }
+      this.SetVersionToDependencyEntryInternal(
+        targetFilesToProcess, false, true, false,
+        new DependencyInfo(dependencyPackageId, newDependentVersion)
+      );
+    }
+
+    private void SetVersionToDependencyEntryInternal(
+      string targetFilesToProcess, bool addNew, bool updateExisiting, bool deleteOthers,
+      params DependencyInfo[] newDependencies
+    ) {
+      string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
+      foreach (var fileFullName in allFileFullNames) {
+        try {
+          IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
+          tgt.WritePackageDependencies(newDependencies, addNew, updateExisiting, deleteOthers);
+        }
+        catch (Exception ex) {
+          Console.WriteLine(ex.Message);
+        }
+      }
+    }
+
+    public void CopyDependencyEntries(
+      string targetFilesToUpdate,
+      string sourceFileToReadDependencies,
+      string packageIdWhitelist="*",
+      string packageIdBlacklist = "",
+      string contraintType = "KEEP",
+      bool addNew = true,
+      bool updateExisiting = true,
+      bool deleteOthers = false
+    ) {
+      DependencyInfo[] srcDependencies;
+      try {
+        IVersionContainer tgt = InitializeVersionContainerByFileType(sourceFileToReadDependencies);
+        srcDependencies = tgt.ReadPackageDependencies();
+      }
+      catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+        return;
+      }
+      if(packageIdWhitelist != "*" && packageIdWhitelist != "") {
+        var split = packageIdWhitelist.Split(',');
+        srcDependencies = srcDependencies.Where((d)=> split.Contains(d.TargetPackageId)).ToArray();
+      }
+      if (packageIdBlacklist != "") {
+        var split = packageIdWhitelist.Split(',');
+        srcDependencies = srcDependencies.Where((d) => !split.Contains(d.TargetPackageId)).ToArray();
+      }
+
+      if (contraintType == "EXACT") {  
+        foreach (var dep in srcDependencies) {
+          dep.TargetPackageVersionConstraint.SetVersionShouldBeExact(dep.TargetPackageVersionConstraint.ToString(true));
+        }
+      }
+      else if (contraintType == "MIN") {;
+        foreach (var dep in srcDependencies) {
+          dep.TargetPackageVersionConstraint.SetVersionShouldBeGreaterThanOrEqual(dep.TargetPackageVersionConstraint.ToString(true));
+        }
+      }
+      else if (contraintType == "KEEP") {
+      }
+      else { //SEM-SAFE
+        foreach (var dep in srcDependencies) {
+          dep.TargetPackageVersionConstraint.SetVersionShouldBeInNonBreakingRange(dep.TargetPackageVersionConstraint.ToString(true));
+        }
+      }
+
+      this.SetVersionToDependencyEntryInternal(targetFilesToUpdate, addNew, updateExisiting, deleteOthers, srcDependencies);
     }
 
     /// <summary>
@@ -862,25 +995,32 @@ namespace Versioning {
         fileFullName = Path.GetFullPath(fileFullName);
       }
 
-      if (fileFullName.Equals("package.json", StringComparison.InvariantCultureIgnoreCase)) {
+      string fName = Path.GetFileName(fileFullName);
+
+      if (fName.Equals("package.json", StringComparison.InvariantCultureIgnoreCase)) {
         return new NpmPackageJsonFileAccessor(fileFullName);
       }
-      else if (fileFullName.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)) {
+      if (fName.Equals("packages.config", StringComparison.InvariantCultureIgnoreCase)) {
+        return new PackagesConfigFileAccessor(fileFullName);
+      }
+      else if (fName.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)) {
         return new VersionInfoJsonFileAccessor(fileFullName);
       }
-      else if (fileFullName.EndsWith(".vbproj", StringComparison.InvariantCultureIgnoreCase) || fileFullName.EndsWith(".csproj", StringComparison.InvariantCultureIgnoreCase)) {
+      else if (fName.EndsWith(".vbproj", StringComparison.InvariantCultureIgnoreCase) || fName.EndsWith(".csproj", StringComparison.InvariantCultureIgnoreCase)) {
         return new VsProjFileAccessor(fileFullName);
       }
-      else if (fileFullName.EndsWith(".vb", StringComparison.InvariantCultureIgnoreCase) || fileFullName.EndsWith(".cs", StringComparison.InvariantCultureIgnoreCase)) {
+      else if (fName.EndsWith(".vb", StringComparison.InvariantCultureIgnoreCase) || fName.EndsWith(".cs", StringComparison.InvariantCultureIgnoreCase)) {
         return new AssemblyInfoFileAccessor(fileFullName);
       }
-      else if (fileFullName.EndsWith(".nuspec", StringComparison.InvariantCultureIgnoreCase)) {
+      else if (fName.EndsWith(".nuspec", StringComparison.InvariantCultureIgnoreCase)) {
         return new NuspecFileAccessor(fileFullName);
       }
-      else if (fileFullName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) || fileFullName.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase)) {
+      else if (fName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) || fName.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase)) {
         return new CompiledAssembyFileAccessor(fileFullName);
       }
-      return null;
+
+      throw new NotImplementedException("Unsupported File: " + fName);
+      //return null;
     }
 
     #endregion

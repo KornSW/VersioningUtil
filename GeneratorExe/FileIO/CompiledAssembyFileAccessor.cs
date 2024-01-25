@@ -41,6 +41,13 @@ namespace FileIO {
       throw new InvalidOperationException("This tool cannot write matadata into a compiled assembly!");  
     }
 
+    public void WritePackageDependencies(DependencyInfo[] readPackageDependencies, bool addNew, bool updateExisiting, bool deleteOthers) {
+    }
+
+    public DependencyInfo[] ReadPackageDependencies() {
+      return new DependencyInfo[] { };
+    }
+
   }
 
 }

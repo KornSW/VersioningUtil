@@ -59,6 +59,56 @@ namespace FileIO {
       }
     }
 
+    public void WritePackageDependencies(DependencyInfo[] packageDependencies, bool addNew, bool updateExisiting, bool deleteOthers) {
+
+      if (addNew) {
+        throw new NotImplementedException("adding new dependencies is currenlty not supported");
+      }
+      if (deleteOthers) {
+        throw new NotImplementedException("deleting dependencies is currenlty not supported");
+      }
+
+      if (updateExisiting) {
+
+        string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+
+        bool fileChanged = false;
+        foreach (var packageDependency in packageDependencies) {
+          int matchCount = 0;
+          rawContent = FileIoHelper.Replace(
+            rawContent,
+            $"<dependency id=\"{packageDependency.TargetPackageId}\" version=\"[a-zA-Z0-9.,)(\\[\\]\\-\\*]*\"",
+            $"<dependency id=\"{packageDependency.TargetPackageId}\" version=\"{packageDependency.TargetPackageVersionConstraint}\"", ref matchCount
+          );
+          if (matchCount > 0) {
+            Console.WriteLine($"Replaced ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
+            fileChanged = true;
+          }
+        }
+
+        if (fileChanged) {
+          FileIoHelper.WriteFile(_FileFullName, rawContent);
+        }
+
+      }
+
+    }
+
+    private string _RegexSearchDep = "<dependency id=\"[a-zA-Z0-9.\\-\\*]*\" version=\"[a-zA-Z0-9.,)(\\[\\]\\-\\*]*\"";
+    public DependencyInfo[] ReadPackageDependencies() {
+      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+
+      //if (rawContent.Contains("targetFramework")) {
+      //}
+
+      //TODO: support für targetFramwork - filter!!!
+
+      return Regex.Matches(rawContent, _RegexSearchDep).Select((m) => {
+        string[] slt = m.Value.Split('"');
+        return new DependencyInfo(slt[1], slt[3]);
+      }).ToArray();
+    }
+
   }
 
 }
