@@ -141,6 +141,7 @@ namespace Versioning {
       );
     }
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string _ConstraintPattern = null;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -155,7 +156,7 @@ namespace Versioning {
     }
 
     public string ToString(bool cleanMinVersion) {
-      if (cleanMinVersion) {
+      if (!cleanMinVersion) {
         return this.ConstraintPattern;
       }
       else {

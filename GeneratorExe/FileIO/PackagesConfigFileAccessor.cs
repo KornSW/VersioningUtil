@@ -41,7 +41,7 @@ namespace FileIO {
 
       if (updateExisiting) {
 
-        string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+        string rawContent = File.ReadAllText(_FileFullName, Encoding.UTF8);
 
         bool fileChanged = false;
         foreach (var packageDependency in packageDependencies) {
@@ -49,10 +49,10 @@ namespace FileIO {
           rawContent = FileIoHelper.Replace(
             rawContent,
             $"<package id=\"{packageDependency.TargetPackageId}\" version=\"[a-zA-Z0-9.\\-\\*]*\"",
-            $"<package id=\"{packageDependency.TargetPackageId}\" version=\"{packageDependency.TargetPackageVersionConstraint}\"", ref matchCount
+            $"<package id=\"{packageDependency.TargetPackageId}\" version=\"{packageDependency.TargetPackageVersionConstraint.ToString(true)}\"", ref matchCount
           );
           if (matchCount > 0) {
-            Console.WriteLine($"Replaced ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
+            Console.WriteLine($"  Processed ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
             fileChanged = true;
           }
         }
@@ -67,7 +67,7 @@ namespace FileIO {
 
     private string _RegexSearch = "<package id=\"[a-zA-Z0-9.\\-\\*]*\" version=\"[a-zA-Z0-9.\\-\\*]*\"";
     public DependencyInfo[] ReadPackageDependencies() {
-      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+      string rawContent = File.ReadAllText(_FileFullName, Encoding.UTF8);
 
       return Regex.Matches(rawContent, _RegexSearch).Select((m) => {
         string[] slt = m.Value.Split('"');

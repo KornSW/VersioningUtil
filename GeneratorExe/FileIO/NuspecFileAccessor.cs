@@ -46,14 +46,18 @@ namespace FileIO {
 
     public void WriteVersion(VersionInfo versionInfo) {
       string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
-      Console.WriteLine($"Writing Version '{versionInfo.currentVersionWithSuffix}' into '{_FileFullName}'");
+      string versionToWrite = versionInfo.currentVersionWithSuffix;
+
+      versionToWrite = versionToWrite.Replace("*","0");
+
+      Console.WriteLine($"Writing Version '{versionToWrite}' into '{_FileFullName}'");
 
       int matchCount = 0;
       rawContent = FileIoHelper.Replace(
-        rawContent, _RegexSearch, $"<version>{versionInfo.currentVersionWithSuffix}</version>", ref matchCount
+        rawContent, _RegexSearch, $"<version>{versionToWrite}</version>", ref matchCount
       );
 
-      Console.WriteLine($"Replaced {matchCount} matches...");
+      Console.WriteLine($"  Processed {matchCount} matches...");
       if (matchCount > 0) {
         FileIoHelper.WriteFile(_FileFullName, rawContent);
       }
@@ -70,7 +74,7 @@ namespace FileIO {
 
       if (updateExisiting) {
 
-        string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+        string rawContent = File.ReadAllText(_FileFullName, Encoding.UTF8);
 
         bool fileChanged = false;
         foreach (var packageDependency in packageDependencies) {
@@ -81,7 +85,7 @@ namespace FileIO {
             $"<dependency id=\"{packageDependency.TargetPackageId}\" version=\"{packageDependency.TargetPackageVersionConstraint}\"", ref matchCount
           );
           if (matchCount > 0) {
-            Console.WriteLine($"Replaced ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
+            Console.WriteLine($"  Processed ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
             fileChanged = true;
           }
         }
@@ -96,10 +100,7 @@ namespace FileIO {
 
     private string _RegexSearchDep = "<dependency id=\"[a-zA-Z0-9.\\-\\*]*\" version=\"[a-zA-Z0-9.,)(\\[\\]\\-\\*]*\"";
     public DependencyInfo[] ReadPackageDependencies() {
-      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
-
-      //if (rawContent.Contains("targetFramework")) {
-      //}
+      string rawContent = File.ReadAllText(_FileFullName, Encoding.UTF8);
 
       //TODO: support für targetFramwork - filter!!!
 

@@ -150,9 +150,18 @@ namespace Utils {
       List<string> commandLineArgumentList = new List<string>();
       bool terminationActive = false;
       bool encapsulationActive = false;
+      bool encapsulationWasJustActive = false;
       System.Text.StringBuilder currentArg = new System.Text.StringBuilder();
 
       foreach (char currentChar in commandLine) {
+
+        if (currentChar != _ArgumentSeparationChar) {
+          //the case for _ArgumentSeparationChar is the only one who will need to take a look at
+          //encapsulationWasJustActive, and only if it was set during the last iteration!
+          //so we can reset it in all other cases
+          encapsulationWasJustActive = false;
+        }
+
         switch (currentChar) {
           case _TerminatorChar: {
               if ((terminationActive)) {
@@ -163,20 +172,18 @@ namespace Utils {
                 terminationActive = true;
               break;
             }
-
           case _ArgumentSeparationChar: {
               if ((encapsulationActive || terminationActive)) {
                 currentArg.Append(_ArgumentSeparationChar);
                 terminationActive = false;
               }
-              else
-
-              // to begin a new argument, we need to submit the current argument
-              if ((currentArg.Length > 0)) {
-                commandLineArgumentList.Add(currentArg.ToString());
-                currentArg.Clear();
+              else { 
+                // to begin a new argument, we need to submit the current argument
+                if ((currentArg.Length > 0 || encapsulationWasJustActive)) {
+                  commandLineArgumentList.Add(currentArg.ToString());
+                  currentArg.Clear();
+                }
               }
-
               break;
             }
 
@@ -187,6 +194,7 @@ namespace Utils {
               }
               else
                 encapsulationActive = !encapsulationActive;
+                encapsulationWasJustActive = true;
               break;
             }
 

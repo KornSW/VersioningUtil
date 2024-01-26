@@ -162,6 +162,7 @@ namespace Versioning {
       var res = new FilePlaceholderResolver(vers);
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
       foreach (var fileFullName in allFileFullNames) {
+        Console.WriteLine($"Processing '{fileFullName}'...");
         try {
           res.ResolvePlaceholders(fileFullName);
         }
@@ -189,6 +190,7 @@ namespace Versioning {
 
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
       foreach (var fileFullName in allFileFullNames) {
+        Console.WriteLine($"Processing '{fileFullName}'...");
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           VersionInfo vers = tgt.ReadVersion();
@@ -236,6 +238,7 @@ namespace Versioning {
 
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
       foreach (var fileFullName in allFileFullNames) {
+        Console.WriteLine($"Processing '{fileFullName}'...");
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           tgt.WriteVersion(vers);
@@ -275,6 +278,7 @@ namespace Versioning {
       VersionInfo vers = src.ReadVersion();
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
       foreach (var fileFullName in allFileFullNames) {
+        Console.WriteLine($"Processing '{fileFullName}'...");
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           tgt.WriteVersion(vers);
@@ -380,8 +384,7 @@ namespace Versioning {
       string targetFilesToProcess,
       string contraintType = "SEM-SAFE"
     ) {
-      DependencyInfo dep;
-      dep = new DependencyInfo(dependencyPackageId, newDependentVersion);
+      DependencyInfo dep = new DependencyInfo(dependencyPackageId, newDependentVersion);
       if (contraintType == "EXACT") {
         dep.TargetPackageVersionConstraint.SetVersionShouldBeExact(newDependentVersion);
       }
@@ -394,8 +397,7 @@ namespace Versioning {
         dep.TargetPackageVersionConstraint.SetVersionShouldBeInNonBreakingRange(newDependentVersion);
       }
       this.SetVersionToDependencyEntryInternal(
-        targetFilesToProcess, false, true, false,
-        new DependencyInfo(dependencyPackageId, newDependentVersion)
+        targetFilesToProcess, false, true, false, dep
       );
     }
 
@@ -405,6 +407,7 @@ namespace Versioning {
     ) {
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
       foreach (var fileFullName in allFileFullNames) {
+        Console.WriteLine($"Processing '{fileFullName}'...");
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           tgt.WritePackageDependencies(newDependencies, addNew, updateExisiting, deleteOthers);

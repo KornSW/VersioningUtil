@@ -21,7 +21,26 @@ namespace FileIO {
       }
     }
 
+    public bool IsCSharp() {
+      return _FileFullName.EndsWith(".csproj");
+    }
+
+    public bool IsVb() {
+      return _FileFullName.EndsWith(".vbproj");
+    }
+
+    public bool IsDotNetCoreFormat() {
+      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+      bool isDotNetLegacy = rawContent.Contains("<TargetFrameworkVersion>");
+      return !isDotNetLegacy;
+    }
+
     public VersionInfo ReadVersion() {
+      IVersionContainer target = this.GetContainerOfVersion();
+      if (target != this) {
+        return target.ReadVersion();
+      }
+
       string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
       var versionInfo = new VersionInfo();
 
@@ -35,6 +54,12 @@ namespace FileIO {
           versionInfo.currentVersionWithSuffix = matchAssVers.Value.Substring(17, matchAssVers.Value.Length - 35);
         }
       }
+
+      //if (versionInfo.currentVersionWithSuffix.EndsWith(".*")) {
+      //  versionInfo.currentVersionWithSuffix = versionInfo.currentVersionWithSuffix.Substring(
+      //    0, versionInfo.currentVersionWithSuffix.Length - 2
+      //  );
+      //}
 
       versionInfo.CurrentVersionWithSuffix2CurrentVersionAndPrereleaseSuffx(true);
 
@@ -55,6 +80,12 @@ namespace FileIO {
     private string _RegexSearchFileVer = "(<FileVersion\\>[a-zA-Z0-9.\\-\\*]*<\\/FileVersion\\>)";
 
     public void WriteVersion(VersionInfo versionInfo) {
+      IVersionContainer target = this.GetContainerOfVersion();
+      if (target != this) {
+        target.WriteVersion(versionInfo);
+        return;
+      }
+
       string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
       Console.WriteLine($"Writing Version '{versionInfo.currentVersionWithSuffix}' into '{_FileFullName}'");
 
@@ -69,16 +100,31 @@ namespace FileIO {
         rawContent, _RegexSearchFileVer, $"<FileVersion>{versionInfo.currentVersion}</FileVersion>", ref matchCount
       );
 
-      Console.WriteLine($"Replaced {matchCount} matches...");
+      Console.WriteLine($"  Processed {matchCount} matches...");
       if (matchCount > 0) {
         FileIoHelper.WriteFile(_FileFullName, rawContent);
       }
     }
 
-    public bool IsDotNetCoreFormat() {
-      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
-      bool isDotNetLegacy = rawContent.Contains("<TargetFrameworkVersion>");
-      return !isDotNetLegacy;
+    private IVersionContainer GetContainerOfVersion() {
+      if (this.IsDotNetCoreFormat()) {
+        return this;
+      }
+      else if(this.IsCSharp()){
+        string assemblyInfoFileFullName = Path.Combine(
+          Path.GetDirectoryName(_FileFullName), "Properties\\AssemblyInfo.cs"
+        );
+        return new AssemblyInfoFileAccessor(assemblyInfoFileFullName);
+      }
+      else if (this.IsVb()) {
+        string assemblyInfoFileFullName = Path.Combine(
+          Path.GetDirectoryName(_FileFullName), "My Project\\AssemblyInfo.vb"
+        );
+        return new AssemblyInfoFileAccessor(assemblyInfoFileFullName);
+      }
+      else {
+        throw new Exception("Unknown format of Projekt-File");
+      }
     }
 
     private IVersionContainer GetContainerOfDependencies(bool createExternaFiles) {
@@ -121,10 +167,10 @@ namespace FileIO {
           rawContent = FileIoHelper.Replace(
             rawContent,
             $"<PackageReference Include=\"{packageDependency.TargetPackageId}\" Version=\"[a-zA-Z0-9.\\-\\*]*\"",
-            $"<PackageReference Include=\"{packageDependency.TargetPackageId}\" Version=\"{packageDependency.TargetPackageVersionConstraint}\"", ref matchCount
+            $"<PackageReference Include=\"{packageDependency.TargetPackageId}\" Version=\"{packageDependency.TargetPackageVersionConstraint.ToString(true)}\"", ref matchCount
           );
           if(matchCount > 0) {
-            Console.WriteLine($"Replaced ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
+            Console.WriteLine($"  Processed ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
             fileChanged = true;
           } 
         }

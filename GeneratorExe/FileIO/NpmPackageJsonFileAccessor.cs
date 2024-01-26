@@ -41,14 +41,19 @@ namespace FileIO {
 
     public void WriteVersion(VersionInfo versionInfo) {
       string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
-      Console.WriteLine($"Writing Version '{versionInfo.currentVersionWithSuffix}' into '{_FileFullName}'");
+
+      string versionToWrite = versionInfo.currentVersionWithSuffix;
+
+      versionToWrite = versionToWrite.Replace("*", "0");
+
+      Console.WriteLine($"Writing Version '{versionToWrite}' into '{_FileFullName}'");
 
       int matchCount = 0;
       rawContent = FileIoHelper.Replace(
-        rawContent, _RegexSearch, $"\"version\": \"{versionInfo.currentVersionWithSuffix}\"", ref matchCount
+        rawContent, _RegexSearch, $"\"version\": \"{versionToWrite}\"", ref matchCount
       );
 
-      Console.WriteLine($"Replaced {matchCount} matches...");
+      Console.WriteLine($"  Processed {matchCount} matches...");
       if (matchCount > 0) {
         FileIoHelper.WriteFile(_FileFullName, rawContent);
       }

@@ -16,10 +16,18 @@ namespace FileIO {
       Console.WriteLine($"  Searching for '" + regexSearch + "' ...");
       var matches = Regex.Matches(input, regexSearch);
       foreach (Match match in matches) {
-        Console.ForegroundColor = ConsoleColor.Magenta;
-        Console.WriteLine($"      Replacing '" + match.Value + "'");
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"             by '" + replacement + "'");
+
+        if(match.Value == replacement) {
+          Console.ForegroundColor = ConsoleColor.White;
+          Console.WriteLine($"      Keeping   '" + match.Value + "' (no change)");
+        }
+        else {
+          Console.ForegroundColor = ConsoleColor.Magenta;
+          Console.WriteLine($"      Replacing '" + match.Value + "'");
+          Console.ForegroundColor = ConsoleColor.Yellow;
+          Console.WriteLine($"             by '" + replacement + "'");
+        }
+
         matchCount++;
       }
       Console.ForegroundColor = col;

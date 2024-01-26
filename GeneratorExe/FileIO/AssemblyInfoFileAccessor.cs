@@ -87,7 +87,7 @@ namespace FileIO {
         rawContent, _RegexSearchFileVers, $"ssembly: AssemblyFileVersion(\"{versionInfo.currentVersion}\")", ref matchCount
       );
 
-      Console.WriteLine($"Replaced {matchCount} matches...");
+      Console.WriteLine($"  Processed {matchCount} matches...");
       if (matchCount > 0) {
         FileIoHelper.WriteFile(_FileFullName, rawContent);
       }
