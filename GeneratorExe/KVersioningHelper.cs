@@ -19,6 +19,101 @@ namespace Versioning {
 
   public class KVersioningHelper {
 
+    public void ImportGitCommentsIntoChangelog(
+      string versioninfoFile = "versioninfo.json",
+      string changeLogFile = "changelog.md",
+      string ignoreBySubstring = "(last version"
+    ) {
+
+      DateTime lastVersionTime = DateTime.MinValue;
+      IVersionContainer src = InitializeVersionContainerByFileType(versioninfoFile);
+      if (src != null) {
+        VersionInfo vers = src.ReadVersion();
+        if(!DateTime.TryParse(vers.versionDateInfo + " " + vers.versionTimeInfo,out lastVersionTime)) {
+          Console.WriteLine($"Versioninfo file '{versioninfoFile}' does not contain valid time information!");
+          return;
+        }
+      }
+
+      if(lastVersionTime == DateTime.MinValue) {
+        Console.WriteLine($"Importing comments from GIT-History since repository creation:");     
+      }
+      else {
+        Console.WriteLine($"Importing comments from GIT-History since {lastVersionTime:yyyy-MM-dd} {lastVersionTime:HH:mm:ss} (last version):");
+      }
+      Console.WriteLine();
+
+      if (!Path.IsPathRooted(changeLogFile)) {
+        changeLogFile = Path.Combine(Environment.CurrentDirectory, changeLogFile);
+      }
+      changeLogFile = Path.GetFullPath(changeLogFile);
+
+      var allLines = new List<string>();
+
+      using (FileStream fs = new FileStream(changeLogFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite)) {
+        using (StreamReader sr = new StreamReader(fs, Encoding.Default)) {
+          while (!sr.EndOfStream) {
+            string line = sr.ReadLine();
+            if (line == null) {
+              break;
+            }
+            allLines.Add(line);
+          };
+        }
+      }
+
+      bool fileIsNew = (allLines.Count() == 0);
+      if (fileIsNew) {
+        allLines.Add(startMarker);
+        allLines.Add("This files contains a version history including all changes relevant for semantic versioning...");
+        allLines.Add("*(it is automatically maintained using the ['KornSW-VersioningUtil'](https://github.com/KornSW/VersioningUtil))*");
+        allLines.Add("");
+        allLines.Add("");
+        allLines.Add(upcommingChangesMarker);
+      }
+
+      int upcommingChangesIndex = FindIndex(allLines, upcommingChangesMarker);
+
+      System.Diagnostics.Process p = new System.Diagnostics.Process();
+
+      p.StartInfo.FileName = "git";
+      p.StartInfo.UseShellExecute = false;
+      //file:///C:/Program%20Files/Git/mingw64/share/doc/git-doc/git-log.html
+      p.StartInfo.Arguments = "log --no-decorate --pretty=format:[%ai]%s";
+      p.StartInfo.CreateNoWindow = true;
+      p.StartInfo.RedirectStandardOutput = true;
+      p.StartInfo.RedirectStandardError = true;
+
+      p.EnableRaisingEvents = true;
+      p.Start();
+      var output = p.StandardOutput.ReadToEnd();
+
+      var hsr = new StringReader(output);
+      string historyline = hsr.ReadLine();
+      while (!string.IsNullOrWhiteSpace(historyline)) {
+        if (historyline.StartsWith("[")){
+          string datePart = historyline.Substring(1,19); //[2024-02-16 16:28:37 +0100]
+          string subject = historyline.Substring(27);
+          if(string.IsNullOrWhiteSpace(ignoreBySubstring) || !subject.Contains(ignoreBySubstring)) {
+            if(DateTime.Parse(datePart) > lastVersionTime) {
+              Console.WriteLine(datePart + ": " + subject);
+              allLines.Insert(upcommingChangesIndex + 1, "* " + subject);
+            }
+          }
+ 
+        }
+        historyline = hsr.ReadLine();
+      }
+
+      //using (StreamReader s = p.StandardError) {
+      //  string error = s.ReadToEnd();
+      //  p.WaitForExit(20000);
+      //}
+
+      File.WriteAllLines(changeLogFile, allLines.ToArray(), Encoding.Default);
+
+    }
+
     /// <summary>
     /// Uses a given changeLogFile a leading database to store the current version of an product as
     /// well as a list of upcomming changes, that will lead to a new version.
