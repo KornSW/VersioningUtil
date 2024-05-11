@@ -1,7 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Text;
-using System.Text.Json;
 
 namespace Versioning {
 
@@ -48,12 +45,11 @@ namespace Versioning {
     /// <summary>
     ///  increases currentMajor AND sets currentMinor+currentPatch to ZERO
     /// </summary>
-    public void IncreaseCurrentMajor(bool minorIfPreMvp,bool alsoUpdateOtherConsolidatedFields = true) {
+    public void IncreaseCurrentMajor(bool minorIfPreMvp, bool alsoUpdateOtherConsolidatedFields = true) {
       if (minorIfPreMvp && currentMajor == 0) {
         currentMinor++;
         currentFix = 0;
-      }
-      else {
+      } else {
         currentMajor++;
         currentMinor = 0;
         currentFix = 0;
@@ -85,20 +81,19 @@ namespace Versioning {
     }
 
     public String previousVersion { get; set; } = "0.0.0";
+
     public String changeGrade { get; set; } = "initial";
+
     public void RecalculateChangeGradeBasedOnPreviousVersion() {
       ParseVersion(previousVersion, out int pMaj, out int pMin, out int pFix, out string pPreReleaseSuffix);
       ParseVersion(currentVersion, out int cMaj, out int cMin, out int cFix, out string cPreReleaseSuffix);
-      if(cMaj> pMaj) {
+      if (cMaj > pMaj) {
         changeGrade = "major";
-      }
-      else if (cMin > pMin) {
+      } else if (cMin > pMin) {
         changeGrade = "minor";
-      }
-      else if (cFix > pFix) {
+      } else if (cFix > pFix) {
         changeGrade = "fix";
-      }
-      else {
+      } else {
         changeGrade = "initial";
       }
     }
@@ -112,8 +107,11 @@ namespace Versioning {
     private static void ParseVersion(string version, out int major, out int minor, out int fix, out string preReleaseSuffix) {
 
       var versionPortion = version;
+
       preReleaseSuffix = "";
+
       int idx = version.IndexOf("-");
+
       if (idx != -1) {
         versionPortion = version.Substring(0, idx);
         preReleaseSuffix = version.Substring(idx + 1);
@@ -122,20 +120,17 @@ namespace Versioning {
       var parts = versionPortion.Split('.');
       if (Int32.TryParse(parts[0], out int result)) {
         major = result;
-      }
-      else {
+      } else {
         major = 0;
       }
       if (parts.Length > 1 && Int32.TryParse(parts[1], out int result2)) {
         minor = result2;
-      }
-      else {
+      } else {
         minor = 0;
       }
       if (parts.Length > 2 && Int32.TryParse(parts[2], out int result3)) {
         fix = result3;
-      }
-      else {
+      } else {
         fix = 0;
       }
 

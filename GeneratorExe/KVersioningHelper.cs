@@ -1,19 +1,13 @@
-﻿using FileIO;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Design.Serialization;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using FileIO;
 using Utils;
-using Versioning;
+using Versioning.ShouldBeLibrary;
+using Versioning.TextProcessing;
 
 namespace Versioning {
 
@@ -64,15 +58,15 @@ namespace Versioning {
 
       bool fileIsNew = (allLines.Count() == 0);
       if (fileIsNew) {
-        allLines.Add(startMarker);
+        allLines.Add(Conventions.startMarker);
         allLines.Add("This files contains a version history including all changes relevant for semantic versioning...");
         allLines.Add("*(it is automatically maintained using the ['KornSW-VersioningUtil'](https://github.com/KornSW/VersioningUtil))*");
         allLines.Add("");
         allLines.Add("");
-        allLines.Add(upcommingChangesMarker);
+        allLines.Add(Conventions.upcommingChangesMarker);
       }
 
-      int upcommingChangesIndex = FindIndex(allLines, upcommingChangesMarker);
+      int upcommingChangesIndex = ListUtil.FindIndex(allLines, Conventions.upcommingChangesMarker);
 
       System.Diagnostics.Process p = new System.Diagnostics.Process();
 
@@ -167,7 +161,7 @@ namespace Versioning {
 
       bool fileIsNew = (allLines.Count() == 0);
       if (fileIsNew) {
-        allLines.Add(startMarker);
+        allLines.Add(Conventions.startMarker);
         allLines.Add("This files contains a version history including all changes relevant for semantic versioning...");
         allLines.Add("*(it is automatically maintained using the ['KornSW-VersioningUtil'](https://github.com/KornSW/VersioningUtil))*");
         allLines.Add("");
@@ -178,7 +172,7 @@ namespace Versioning {
         preReleaseSemantic = "";
       }
 
-      var info = KVersioningHelper.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic);
+      var info = MarkDownProcessor.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic);
 
       Console.WriteLine(info.currentVersionWithSuffix);
       Console.WriteLine("---");
@@ -310,17 +304,17 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// SAMPLE: SetVersion "1.2.3-alpha" "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;"
+    ///   SAMPLE: SetVersion "1.2.3-alpha" "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;"
     /// </summary>
     /// <param name="semanticVersion">
     ///   can also contain a suffix like '-prerelease'
     /// </param>
     /// <param name="targetFilesToProcess">
-    /// multiple minimatch-patterns (separated by ;) to address one or more
-    /// 'package.json' files in NPM format OR
-    /// '.nuspec' files in NuGetFormat OR
-    /// '.vbproj'/'.csproj' files in .net CORE project format OR
-    /// 'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
+    ///   multiple minimatch-patterns (separated by ;) to address one or more
+    ///   'package.json' files in NPM format OR
+    ///   '.nuspec' files in NuGetFormat OR
+    ///   '.vbproj'/'.csproj' files in .net CORE project format OR
+    ///   'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
     /// </param>
     public void SetVersion(
       string semanticVersion,
@@ -346,20 +340,20 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// SAMPLE: ImportVersion "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;" "myLib.nuspec" 
+    ///   SAMPLE: ImportVersion "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;" "myLib.nuspec" 
     /// </summary>
     /// <param name="metaDataSourceFile">
-    /// a single file name, which can be 
-    /// a 'package.json' file in NPM format OR
-    /// a '.nuspec' file in NuGetFormat OR
-    /// a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
+    ///   a single file name, which can be 
+    ///   a 'package.json' file in NPM format OR
+    ///   a '.nuspec' file in NuGetFormat OR
+    ///   a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
     /// </param>
     /// <param name="targetFilesToProcess">
-    /// multiple minimatch-patterns (separated by ;) to address one or more
-    /// 'package.json' files in NPM format OR
-    /// '.nuspec' files in NuGetFormat OR
-    /// '.vbproj'/'.csproj' files in .net CORE project format OR
-    /// 'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
+    ///   multiple minimatch-patterns (separated by ;) to address one or more
+    ///   'package.json' files in NPM format OR
+    ///   '.nuspec' files in NuGetFormat OR
+    ///   '.vbproj'/'.csproj' files in .net CORE project format OR
+    ///   'AssemblyInfo.vb'/'AssemblyInfo.cs' files containing Assembly Attributes
     /// </param>
     public void ImportVersion(
       string targetFilesToProcess,
@@ -385,8 +379,8 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// reads a file and prints information about its dependencies
-    /// SAMPLE: ListDependencies "myLib.nuspec"
+    ///   reads a file and prints information about its dependencies
+    ///   SAMPLE: ListDependencies "myLib.nuspec"
     /// </summary>
     /// <param name="fileToAnalyze"></param>
     public void ListDependencies(
@@ -419,26 +413,26 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// SAMPLE: CopyVersionToDependencyEntry "MyLib" "**\*.nuspec;**\package.json;!**\node_modules\**" "myLib.nuspec"
+    ///   SAMPLE: CopyVersionToDependencyEntry "MyLib" "**\*.nuspec;**\package.json;!**\node_modules\**" "myLib.nuspec"
     /// </summary>
     /// <param name="refPackageId">
     /// </param>
     /// <param name="metaDataSourceFile">
-    /// a single file name, which can be 
-    /// a 'package.json' file in NPM format OR
-    /// a '.nuspec' file in NuGetFormat OR
-    /// a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
+    ///   a single file name, which can be 
+    ///   a 'package.json' file in NPM format OR
+    ///   a '.nuspec' file in NuGetFormat OR
+    ///   a metaDataDumpFile (written by the 'PushVersionOnChangelog' method of this tool)
     /// </param>
     /// <param name="targetFilesToProcess">
-    /// multiple minimatch-patterns (separated by ;) to address one or more
-    /// 'package.json' files in NPM format OR
-    /// '.nuspec' files in NuGetFormat
-    /// WARNING: '.vbproj'/'.csproj' files in .net CORE project format ARE CURRENTLY NOT SUPPORTED!
+    ///   multiple minimatch-patterns (separated by ;) to address one or more
+    ///   'package.json' files in NPM format OR
+    ///   '.nuspec' files in NuGetFormat
+    ///   WARNING: '.vbproj'/'.csproj' files in .net CORE project format ARE CURRENTLY NOT SUPPORTED!
     /// </param>
     /// <param name="contraintType">
-    ///  "SEM-SAFE": require the given version or any newer, as long as the major version is the same;
-    ///  "MIN": require the given version or any newer (including new major versions;
-    ///  "EXACT": require exactly the given version  
+    ///   "SEM-SAFE": require the given version or any newer, as long as the major version is the same;
+    ///   "MIN": require the given version or any newer (including new major versions;
+    ///   "EXACT": require exactly the given version  
     /// </param> 
     public void CopyVersionToDependencyEntry(
       string refPackageId,
@@ -600,10 +594,8 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// You can use this method to test you minimatch patterns...
+    ///   You can use this method to test you minimatch patterns...
     /// </summary>
-    /// <param name="minimatchPatterns"></param>
-    /// <returns></returns>
     public string[] ListFiles(string minimatchPatterns) {
 
       //IF CALLED WITH SINGLE FILE
@@ -704,16 +696,9 @@ namespace Versioning {
     #region " INTERNAL HELPERS "
 
     /// <summary>
-    /// ma1 more than ma2:  1
-    /// ma1 less then ma2: -1
+    ///   ma1 more than ma2:  1
+    ///   ma1 less then ma2: -1
     /// </summary>
-    /// <param name="ma1"></param>
-    /// <param name="mi1"></param>
-    /// <param name="p1"></param>
-    /// <param name="ma2"></param>
-    /// <param name="mi2"></param>
-    /// <param name="p2"></param>
-    /// <returns></returns>
     private static int VersionCompare(int ma1, int mi1, int p1, int ma2, int mi2, int p2) {
       if (ma1 > ma2) {
         return 1;
@@ -736,14 +721,7 @@ namespace Versioning {
       return 0;
     }
 
-    private static int FindIndex(List<string> list, string searchString, int startAt = 0) {
-      for (int i = startAt; i < list.Count(); i++) {
-        if (list[i].Contains(searchString, StringComparison.InvariantCultureIgnoreCase)) {
-          return i;
-        }
-      }
-      return -1;
-    }
+   
 
     internal bool MatchesWildcardMask(string stringToEvaluate, string pattern, bool ignoreCasing = true) {
       var indexOfDoubleDot = pattern.IndexOf("..", StringComparison.Ordinal);
@@ -818,262 +796,7 @@ namespace Versioning {
 
     #region " MD Processing "
 
-    static string startMarker = "# Change log";
-    static string upcommingChangesMarker = "## Upcoming Changes";
-    static string releasedVersionMarker = "## v ";
-    static string mpvReachedTriggerWord = "**MVP**";
-    static string minorMarker = "new Feature";
-    static string majorMarker = "breaking Change";
-
-    private static VersionInfo ProcessMarkdownAndCreateNewVersion(List<string> allLines, string preReleaseSemantic = "") {
-      var versionInfo = new VersionInfo();
-      versionInfo.changeGrade = "fix";
-      versionInfo.versionDateInfo = DateTime.Now.ToString("yyyy-MM-dd");
-      versionInfo.versionTimeInfo = DateTime.Now.ToString("HH:mm:ss");
-
-      versionInfo.preReleaseSuffix = "";
-      if (!string.IsNullOrWhiteSpace(preReleaseSemantic)) {
-        versionInfo.preReleaseSuffix = preReleaseSemantic.Trim().ToLower();
-      }
-
-      int startIndex = FindIndex(allLines, startMarker);
-      if (startIndex < 0) {
-        throw new ApplicationException($"The given file does not contain the StartMarker '{startMarker}'.");
-      }
-
-      Version lastVersion = new Version(0, 0, 0);
-      Version lastVersionOrPre = new Version(0, 0, 0);
-      int upcommingChangesIndex = FindIndex(allLines, upcommingChangesMarker);
-      int releasedVersionIndex = FindIndex(allLines, releasedVersionMarker);
-
-      if (releasedVersionIndex >= 0) {
-        var lastVersionString = allLines[releasedVersionIndex].TrimStart().Substring(releasedVersionMarker.TrimStart().Length);
-        Version.TryParse(lastVersionString, out lastVersion);
-        lastVersionOrPre = lastVersion;
-      }
-
-      bool wasPrereleased = false;
-      bool mpvReachedTrigger = false;
-      if (upcommingChangesIndex < 0) {
-        if (releasedVersionIndex < 0) {
-          allLines.Add(upcommingChangesMarker);//+ " (not yet released)");
-          upcommingChangesIndex = allLines.Count() - 1;
-        }
-        else {
-          allLines.Insert(releasedVersionIndex, upcommingChangesMarker);// + " (not yet released)");
-          upcommingChangesIndex = releasedVersionIndex;
-          releasedVersionIndex++;
-        }
-      }
-      else {
-        var upcommingChangesDetails = allLines[upcommingChangesIndex].TrimStart().Substring(upcommingChangesMarker.TrimStart().Length).Trim();
-        if (upcommingChangesDetails.StartsWith("(")) {
-          upcommingChangesDetails = upcommingChangesDetails.Substring(1);
-        }
-        var v = upcommingChangesDetails.Replace("-", " ").Split(' ')[0];
-        if (v.Contains(".")) {
-          wasPrereleased = Version.TryParse(v, out lastVersionOrPre);
-        }
-      }
-      if (releasedVersionIndex < 0) {
-        releasedVersionIndex = allLines.Count();//nirvana
-      }
-
-      int changes = 0;
-      int linecount = 0;
-      var patchChanges = new List<string>();
-      var minorChanges = new List<string>();
-      var majorChanges = new List<string>();
-      string mvpTriggerMessage = null;
-
-      for (int i = (upcommingChangesIndex + 1); i < releasedVersionIndex; i++) {
-        bool skipAdd = false;
-        string currentLine = allLines[i].Replace("**" + minorMarker + "**", minorMarker).Replace("**" + majorMarker + "**", majorMarker);
-        if (currentLine.Contains(mpvReachedTriggerWord, StringComparison.InvariantCultureIgnoreCase)) {
-          mpvReachedTrigger = true;
-          skipAdd = true;
-          mvpTriggerMessage = currentLine;
-        }
-        if (
-          !String.IsNullOrWhiteSpace(currentLine) &&
-          currentLine.Trim() != "*(none)*" &&
-          !currentLine.Contains("released **")
-        ) {
-          if (currentLine.Contains(majorMarker, StringComparison.InvariantCultureIgnoreCase)) {
-            if (!skipAdd) majorChanges.Add(currentLine.Trim());
-            versionInfo.changeGrade = "major";
-          }
-          else if (currentLine.Contains(minorMarker, StringComparison.InvariantCultureIgnoreCase)) {
-            if (!skipAdd) minorChanges.Add(currentLine.Trim());
-            if (versionInfo.changeGrade == "patch") {
-              versionInfo.changeGrade = "minor";
-            }
-          }
-          else {
-            if (!skipAdd) patchChanges.Add(currentLine.Trim());
-          }
-          changes++;
-        }
-        linecount++;
-      }
-
-      if (changes == 0) {
-        string assumedChange = "* new revision without significant changes";
-        patchChanges.Add(assumedChange);
-        //allLines.Insert(releasedVersionIndex, assumedChange);
-        //releasedVersionIndex++;
-        changes = 1;
-      }
-      else {
-        patchChanges.Sort(StringComparer.OrdinalIgnoreCase);
-        minorChanges.Sort(StringComparer.OrdinalIgnoreCase);
-        majorChanges.Sort(StringComparer.OrdinalIgnoreCase);
-        if (mvpTriggerMessage != null) {
-          //ganz nach oben!!!
-          majorChanges.Insert(0, mvpTriggerMessage);
-        }
-      }
-
-      //alle alten zeilen lschen
-      allLines.RemoveRange(upcommingChangesIndex + 1, linecount);
-      releasedVersionIndex -= linecount;
-
-      //alle zeilen neu einfügen
-      var versionNotes = new StringBuilder();
-      var insertAt = upcommingChangesIndex + 1;
-      foreach (var majorChange in majorChanges) {
-        var info = majorChange.Trim();
-        if (info.StartsWith("* ")) { info = info.Substring(1).Trim(); }
-        if (info.StartsWith("- ")) { info = info.Substring(1).Trim(); }
-        allLines.Insert(insertAt, " - " + info.Replace(majorMarker, "**" + majorMarker + "**"));
-        versionNotes.AppendLine("- " + info);
-        insertAt++;
-        releasedVersionIndex++;
-      }
-      foreach (var minorChange in minorChanges) {
-        var info = minorChange.Trim();
-        if (info.StartsWith("* ")) { info = info.Substring(1).Trim(); }
-        if (info.StartsWith("- ")) { info = info.Substring(1).Trim(); }
-        allLines.Insert(insertAt, " - " + info.Replace(minorMarker, "**" + minorMarker + "**"));
-        versionNotes.AppendLine("- " + info);
-        insertAt++;
-        releasedVersionIndex++;
-      }
-      foreach (var patchChange in patchChanges) {
-        var info = patchChange.Trim();
-        if (info.StartsWith("* ")) { info = info.Substring(1).Trim(); }
-        if (info.StartsWith("- ")) { info = info.Substring(1).Trim(); }
-        allLines.Insert(insertAt, " - " + info);
-        versionNotes.AppendLine("- " + info);
-        insertAt++;
-        releasedVersionIndex++;
-      }
-
-      //zusatzzeilen
-      allLines.Insert(insertAt, "");
-      allLines.Insert(insertAt, "");
-      allLines.Insert(insertAt, "");
-      insertAt += 3;
-      releasedVersionIndex += 3;
-
-      versionInfo.versionNotes = versionNotes.ToString();
-
-      versionInfo.currentMajor = lastVersion.Major;
-      versionInfo.currentMinor = lastVersion.Minor;
-      versionInfo.currentFix = lastVersion.Build;
-
-      var preAlreadyIncreasedMajor = (lastVersion.Major < lastVersionOrPre.Major);
-      var preAlreadyIncreasedMinor = (lastVersion.Minor < lastVersionOrPre.Minor);
-      var preAlreadyIncreasedPatch = (lastVersion.Build < lastVersionOrPre.Build);
-
-      //höhere version berechnen
-      if (versionInfo.changeGrade == "major" || preAlreadyIncreasedMajor) {
-        if (versionInfo.currentMajor > 0 || mpvReachedTrigger) {
-          versionInfo.currentMajor++;
-          versionInfo.currentMinor = 0;
-          versionInfo.currentFix = 0;
-        }
-        else {
-          //bei prereleases zu major=0 (also in der alpha phase) gibt es max ein minor-increment (da sind breaking changes erlaubt);
-          versionInfo.currentMinor++;
-          versionInfo.currentFix = 0;
-        }
-      }
-      else if (versionInfo.changeGrade == "minor" || preAlreadyIncreasedMinor) {
-        versionInfo.currentMinor++;
-        versionInfo.currentFix = 0;
-      }
-      else {
-        versionInfo.currentFix++;
-      }
-
-      //gan am anfang kann man nicht mit einer 0.0.x starten -> 0.1 ist das minimom
-      if (versionInfo.currentMajor == 0 && versionInfo.currentMinor == 0) {
-        versionInfo.currentMinor = 1;
-        versionInfo.currentFix = 0;
-      }
-
-      if (versionInfo.currentMajor == 0 && mpvReachedTrigger) {
-        versionInfo.currentMajor = 1;
-        versionInfo.currentMinor = 0;
-        versionInfo.currentFix = 0;
-      }
-
-      //last prerelese mit einbeziehen
-      if (wasPrereleased) {
-
-        //var posWhenNewMeothThanPre = VersionCompare(
-        //  versionInfo.currentMajor, versionInfo.currentMinor, versionInfo.currentPatch,
-        //  lastVersionOrPre.Major, lastVersionOrPre.Minor, lastVersionOrPre.Build
-        //);
-
-        if (versionInfo.currentMajor == lastVersionOrPre.Major &&
-          versionInfo.currentMinor == lastVersionOrPre.Minor &&
-          versionInfo.currentFix <= lastVersionOrPre.Build
-        ) {
-          if (versionInfo.preReleaseSuffix == "official") {
-            //nur hochzziehen wenn nötig
-            versionInfo.currentFix = lastVersionOrPre.Build;
-          }
-          else {
-            //weiter zählen
-            versionInfo.currentFix = lastVersionOrPre.Build + 1;
-          }
-
-        }
-
-      }
-
-      Version currentVersion = new Version(versionInfo.currentMajor, versionInfo.currentMinor, versionInfo.currentFix);
-      versionInfo.currentVersion = currentVersion.ToString(3);
-      versionInfo.previousVersion = lastVersion.ToString(3);
-
-      //neuen version setzen
-      allLines.Insert(upcommingChangesIndex + 1, $"released **{versionInfo.versionDateInfo}**, including:");
-
-      if (versionInfo.preReleaseSuffix == "") {
-
-        //upcomming wird zu release
-        allLines[upcommingChangesIndex] = releasedVersionMarker.TrimEnd() + $" {currentVersion.ToString(3)}";
-
-        //neuer upcomming wird erstellt
-        allLines.Insert(upcommingChangesIndex, "");
-        allLines.Insert(upcommingChangesIndex, "");
-        allLines.Insert(upcommingChangesIndex, "");
-        allLines.Insert(upcommingChangesIndex, "*(none)*");
-        allLines.Insert(upcommingChangesIndex, "");
-        allLines.Insert(upcommingChangesIndex, upcommingChangesMarker.TrimEnd());// + " (not yet released)");
-
-        versionInfo.currentVersionWithSuffix = versionInfo.currentVersion;
-      }
-      else {
-        //upcomming wird einfach aktualisiert
-        allLines[upcommingChangesIndex] = upcommingChangesMarker.TrimEnd() + $" ({currentVersion.ToString(3)}-{versionInfo.preReleaseSuffix})";
-        versionInfo.currentVersionWithSuffix = versionInfo.currentVersion + "-" + versionInfo.preReleaseSuffix;
-      }
-
-      return versionInfo;
-    }
+    
 
     private IVersionContainer InitializeVersionContainerByFileType(string fileFullName) {
 

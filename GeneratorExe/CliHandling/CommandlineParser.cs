@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 
-namespace Utils {
+namespace Versioning.CliHandling {
 
   //v 21.09.2023
 
@@ -32,7 +31,7 @@ namespace Utils {
 
       public string this[int index] {
         get {
-          if ((index <= (_Params.Length - 1)))
+          if (index <= _Params.Length - 1)
             return _Params[index];
           else
             return string.Empty;
@@ -61,18 +60,18 @@ namespace Utils {
     private CommandLineArgument[] _ParsedArguments;
 
     public CommandLineParser(IEnumerable<string> commandLine, bool skipFirst = false) {
-      _CommandLine = this.JoinCommandLine(commandLine.ToArray());
-      this.Parse(skipFirst);
+      _CommandLine = JoinCommandLine(commandLine.ToArray());
+      Parse(skipFirst);
     }
 
     public CommandLineParser(string[] commandLine, bool skipFirst = false) {
-      _CommandLine = this.JoinCommandLine(commandLine);
-      this.Parse(skipFirst);
+      _CommandLine = JoinCommandLine(commandLine);
+      Parse(skipFirst);
     }
 
     public CommandLineParser(string commandLine, bool skipFirst = false) {
       _CommandLine = commandLine;
-      this.Parse(skipFirst);
+      Parse(skipFirst);
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -83,19 +82,19 @@ namespace Utils {
     }
 
     protected virtual bool IsEncapsulated(string commandLine) {
-      if ((commandLine.Length < 2))
+      if (commandLine.Length < 2)
         return false;
       else
-        return (commandLine.StartsWith(_StringEncapsulationChar) && commandLine.EndsWith(_StringEncapsulationChar));
+        return commandLine.StartsWith(_StringEncapsulationChar) && commandLine.EndsWith(_StringEncapsulationChar);
     }
 
     protected virtual void Encapsulate(ref string commandLine) {
-      if ((!this.IsEncapsulated(commandLine)))
+      if (!IsEncapsulated(commandLine))
         commandLine = string.Format("{0}{1}{0}", _StringEncapsulationChar, commandLine);
     }
 
     protected virtual void Unencapsulate(ref string commandLine) {
-      if ((this.IsEncapsulated(commandLine)))
+      if (IsEncapsulated(commandLine))
         commandLine = commandLine.Substring(1, commandLine.Length - 2);
     }
 
@@ -103,12 +102,12 @@ namespace Utils {
     protected const char _TerminatorChar = '\\';
 
     protected virtual void Terminate(ref string commandLine) {
-      if ((commandLine.Contains(_TerminatorChar)))
+      if (commandLine.Contains(_TerminatorChar))
         commandLine = commandLine.Replace(C2s(_TerminatorChar), C2s(_TerminatorChar, _TerminatorChar));
-      if ((commandLine.Contains(_StringEncapsulationChar)))
-        commandLine = commandLine.Replace(C2s(_StringEncapsulationChar), C2s(_TerminatorChar , _StringEncapsulationChar));
-      if ((commandLine.Contains(_ArgumentSeparationChar)))
-        commandLine = commandLine.Replace(C2s(_ArgumentSeparationChar), C2s(_TerminatorChar , _ArgumentSeparationChar));
+      if (commandLine.Contains(_StringEncapsulationChar))
+        commandLine = commandLine.Replace(C2s(_StringEncapsulationChar), C2s(_TerminatorChar, _StringEncapsulationChar));
+      if (commandLine.Contains(_ArgumentSeparationChar))
+        commandLine = commandLine.Replace(C2s(_ArgumentSeparationChar), C2s(_TerminatorChar, _ArgumentSeparationChar));
     }
 
     private string C2s(params char[] chars) {
@@ -120,11 +119,11 @@ namespace Utils {
     }
 
     protected virtual void Unterminate(ref string commandLine) {
-      if ((commandLine.Contains(C2s(_TerminatorChar, _TerminatorChar))))
+      if (commandLine.Contains(C2s(_TerminatorChar, _TerminatorChar)))
         commandLine = commandLine.Replace(C2s(_TerminatorChar, _TerminatorChar), C2s(_TerminatorChar));
-      if ((commandLine.Contains(C2s(_TerminatorChar , _StringEncapsulationChar))))
-        commandLine = commandLine.Replace(C2s(_TerminatorChar , _StringEncapsulationChar), C2s(_StringEncapsulationChar));
-      if ((commandLine.Contains(C2s(_TerminatorChar, _ArgumentSeparationChar))))
+      if (commandLine.Contains(C2s(_TerminatorChar, _StringEncapsulationChar)))
+        commandLine = commandLine.Replace(C2s(_TerminatorChar, _StringEncapsulationChar), C2s(_StringEncapsulationChar));
+      if (commandLine.Contains(C2s(_TerminatorChar, _ArgumentSeparationChar)))
         commandLine = commandLine.Replace(C2s(_TerminatorChar, _ArgumentSeparationChar), C2s(_ArgumentSeparationChar));
     }
 
@@ -134,13 +133,13 @@ namespace Utils {
     protected static char[] _ArgParamSeparators = new[] { '=', ':' };
 
     protected virtual string JoinCommandLine(string[] commandLineArgumentArray) {
-      for (int i = 0; i <= (commandLineArgumentArray.Length - 1); i++) {
-        this.Unencapsulate(ref commandLineArgumentArray[i]);
+      for (int i = 0; i <= commandLineArgumentArray.Length - 1; i++) {
+        Unencapsulate(ref commandLineArgumentArray[i]);
 
-        this.Terminate(ref commandLineArgumentArray[i]);
+        Terminate(ref commandLineArgumentArray[i]);
 
-        if ((this.NeedsEncapsulation(commandLineArgumentArray[i])))
-          this.Encapsulate(ref commandLineArgumentArray[i]);
+        if (NeedsEncapsulation(commandLineArgumentArray[i]))
+          Encapsulate(ref commandLineArgumentArray[i]);
       }
 
       return string.Join(_ArgumentSeparationChar, commandLineArgumentArray);
@@ -164,63 +163,60 @@ namespace Utils {
 
         switch (currentChar) {
           case _TerminatorChar: {
-              if ((terminationActive)) {
-                currentArg.Append(_TerminatorChar);
-                terminationActive = false;
-              }
-              else
-                terminationActive = true;
-              break;
-            }
+            if (terminationActive) {
+              currentArg.Append(_TerminatorChar);
+              terminationActive = false;
+            } else
+              terminationActive = true;
+            break;
+          }
           case _ArgumentSeparationChar: {
-              if ((encapsulationActive || terminationActive)) {
-                currentArg.Append(_ArgumentSeparationChar);
-                terminationActive = false;
+            if (encapsulationActive || terminationActive) {
+              currentArg.Append(_ArgumentSeparationChar);
+              terminationActive = false;
+            } else {
+              // to begin a new argument, we need to submit the current argument
+              if (currentArg.Length > 0 || encapsulationWasJustActive) {
+                commandLineArgumentList.Add(currentArg.ToString());
+                currentArg.Clear();
               }
-              else { 
-                // to begin a new argument, we need to submit the current argument
-                if ((currentArg.Length > 0 || encapsulationWasJustActive)) {
-                  commandLineArgumentList.Add(currentArg.ToString());
-                  currentArg.Clear();
-                }
-              }
-              break;
             }
+            break;
+          }
 
           case _StringEncapsulationChar: {
-              if ((terminationActive)) {
-                currentArg.Append(_StringEncapsulationChar);
-                terminationActive = false;
-              }
-              else
-                encapsulationActive = !encapsulationActive;
-                encapsulationWasJustActive = true;
-              break;
-            }
+            if (terminationActive) {
+              currentArg.Append(_StringEncapsulationChar);
+              terminationActive = false;
+            } else
+              encapsulationActive = !encapsulationActive;
+            encapsulationWasJustActive = true;
+            break;
+          }
 
           default: {
-              if ((terminationActive)) {
-                currentArg.Append(_TerminatorChar);
-                terminationActive = false;
-              }
-              currentArg.Append(currentChar);
-              break;
+            if (terminationActive) {
+              currentArg.Append(_TerminatorChar);
+              terminationActive = false;
             }
+            currentArg.Append(currentChar);
+            break;
+          }
         }
       }
 
       //special case if terminator is LAST char!
-      if ((terminationActive)) {
+      if (terminationActive) {
         currentArg.Append(_TerminatorChar);
       }
 
       // submit the last argument
-      if ((currentArg.Length > 0)) {
+      if (currentArg.Length > 0) {
         commandLineArgumentList.Add(currentArg.ToString());
         currentArg.Clear();
       }
 
-      if ((skipFirst && commandLineArgumentList.Count > 0))
+      if (skipFirst && commandLineArgumentList.Count > 0)
         commandLineArgumentList.RemoveAt(0);
 
       return commandLineArgumentList.ToArray();
@@ -238,25 +234,25 @@ namespace Utils {
       List<string> currentParams = new List<string>();
       string[] splittedCommandLine;
 
-      splittedCommandLine = this.SplitCommandLine(_CommandLine, skipFirst);
+      splittedCommandLine = SplitCommandLine(_CommandLine, skipFirst);
 
       foreach (string arg in splittedCommandLine) {
         string newArgName = string.Empty;
 
         foreach (string argBeginMarker in _ArgBeginMarkers) {
-          if ((arg.StartsWith(argBeginMarker))) {
+          if (arg.StartsWith(argBeginMarker)) {
             newArgName = arg.Substring(argBeginMarker.Length, arg.Length - argBeginMarker.Length);
             break;
           }
         }
 
-        if ((newArgName != string.Empty)) {
-          if ((currentName != _DefaultName || currentParams.Count > 0))
+        if (newArgName != string.Empty) {
+          if (currentName != _DefaultName || currentParams.Count > 0)
             parsedArgs.Add(new CommandLineArgument(currentName, currentParams.ToArray()));
 
           // make "/A:123 /B:345" >> "/A 123 /B 345"
           foreach (char argParamSeparator in _ArgParamSeparators) {
-            if ((newArgName.Contains(argParamSeparator)))
+            if (newArgName.Contains(argParamSeparator))
               newArgName = newArgName.Replace(argParamSeparator, _ArgParamSeparators[0]);
           }
 
@@ -270,15 +266,14 @@ namespace Utils {
 
             // this check removes the phenom that the string "/R: 123"
             // would have two values {"","123"} because of the blank
-            if ((!string.IsNullOrEmpty(argNameSplit[i])))
+            if (!string.IsNullOrEmpty(argNameSplit[i]))
               currentParams.Add(argNameSplit[i]);
           }
-        }
-        else
+        } else
           currentParams.Add(arg);
       }
 
-      if ((currentName != _DefaultName || currentParams.Count > 0))
+      if (currentName != _DefaultName || currentParams.Count > 0)
         parsedArgs.Add(new CommandLineArgument(currentName, currentParams.ToArray()));
 
       _ParsedArguments = parsedArgs.ToArray();
@@ -312,7 +307,7 @@ namespace Utils {
     }
 
     public bool ContainsArgument(string name) {
-      return (this[name] != null);
+      return this[name] != null;
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
@@ -321,11 +316,11 @@ namespace Utils {
     }
 
     public bool TryGetNamelessParam(int paramIndex, ref string value) {
-      return this.TryGetParam(_DefaultName, paramIndex,ref value);
+      return TryGetParam(_DefaultName, paramIndex, ref value);
     }
     public bool TryGetParam(string argumentName, int paramIndex, ref string value) {
-      if ((this.ContainsArgument(argumentName))) {
-        if ((paramIndex <= (this[argumentName].Params.Length - 1))) {
+      if (ContainsArgument(argumentName)) {
+        if (paramIndex <= this[argumentName].Params.Length - 1) {
           value = this[argumentName].Params[paramIndex];
           return true;
         }
@@ -335,43 +330,43 @@ namespace Utils {
 
     public string GetParam(string argumentName, int paramIndex, string defaultValue = "") {
       string returnValue = defaultValue;
-      this.TryGetParam(argumentName, paramIndex, ref returnValue);
+      TryGetParam(argumentName, paramIndex, ref returnValue);
       return returnValue;
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action thenDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke();
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action<string[]> thenDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke(this[name].Params);
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action<string> thenDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke(this[name].Params[0]);
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action<string, string> thenDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke(this[name].Params[0], this[name].Params[1]);
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action<string, string, string> thenDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke(this[name].Params[0], this[name].Params[1], this[name].Params[2]);
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action thenDo, Action elseDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke();
       else
         elseDo.Invoke();
@@ -379,7 +374,7 @@ namespace Utils {
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string name, Action<string[]> thenDo, Action elseDo) {
-      if ((this.ContainsArgument(name)))
+      if (ContainsArgument(name))
         thenDo.Invoke(this[name].Params);
       else
         elseDo.Invoke();
@@ -387,23 +382,23 @@ namespace Utils {
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string shortName, string longName, Action thenDo) {
-      if ((this.ContainsArgument(shortName)))
+      if (ContainsArgument(shortName))
         thenDo.Invoke();
-      else if ((this.ContainsArgument(longName)))
+      else if (ContainsArgument(longName))
         thenDo.Invoke();
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string shortName, string longName, Action<string[]> thenDo) {
-      if ((this.ContainsArgument(shortName)))
+      if (ContainsArgument(shortName))
         thenDo.Invoke(this[shortName].Params);
-      else if ((this.ContainsArgument(longName)))
+      else if (ContainsArgument(longName))
         thenDo.Invoke(this[longName].Params);
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string shortName, string longName, Action thenDo, Action elseDo) {
-      if ((this.ContainsArgument(shortName) || this.ContainsArgument(longName)))
+      if (ContainsArgument(shortName) || ContainsArgument(longName))
         thenDo.Invoke();
       else
         elseDo.Invoke();
@@ -411,9 +406,9 @@ namespace Utils {
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public void IfArgument(string shortName, string longName, Action<string[]> thenDo, Action elseDo) {
-      if ((this.ContainsArgument(shortName)))
+      if (ContainsArgument(shortName))
         thenDo.Invoke(this[shortName].Params);
-      else if ((this.ContainsArgument(longName)))
+      else if (ContainsArgument(longName))
         thenDo.Invoke(this[longName].Params);
       else
         elseDo.Invoke();
@@ -426,8 +421,8 @@ namespace Utils {
     ///   ''' Dispose the current object instance
     ///   ''' </summary>
     protected virtual void Dispose(bool disposing) {
-      if ((!_AlreadyDisposed)) {
-        if ((disposing)) {
+      if (!_AlreadyDisposed) {
+        if (disposing) {
         }
         _AlreadyDisposed = true;
       }
@@ -437,7 +432,7 @@ namespace Utils {
     ///   ''' Dispose the current object instance and suppress the finalizer
     ///   ''' </summary>
     public void Dispose() {
-      this.Dispose(true);
+      Dispose(true);
       GC.SuppressFinalize(this);
     }
 

@@ -1,14 +1,11 @@
-﻿using FileIO;
-using System;
-using System.Diagnostics;
+﻿using System;
 using System.Reflection;
-using Utils;
+using Versioning.CliHandling;
 
+namespace Versioning
+{
 
-
-namespace Versioning {
-
-  public class Program {
+    public class Program {
 
     static int Main(string[] args) {
       try {

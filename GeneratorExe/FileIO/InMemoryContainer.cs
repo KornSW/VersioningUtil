@@ -7,7 +7,8 @@ namespace FileIO {
   public class InMemoryContainer : IVersionContainer {
 
     private VersionInfo _CurrentVersion = new VersionInfo();
-    private Dictionary<string,string> _CurrentDependencies = new Dictionary<string, string>();
+
+    private Dictionary<string, string> _CurrentDependencies = new Dictionary<string, string>();
 
     public InMemoryContainer() {
     }
@@ -24,8 +25,7 @@ namespace FileIO {
       List<string> othersToDelete;
       if (deleteOthers) {
         othersToDelete = _CurrentDependencies.Keys.ToList();
-      }
-      else {
+      } else {
         othersToDelete = new List<string>();
       }
       foreach (DependencyInfo dependencyToWrite in packageDependencies) {
@@ -36,10 +36,9 @@ namespace FileIO {
           if (updateExisiting) {
             _CurrentDependencies[dependencyToWrite.TargetPackageId] = dependencyToWrite.TargetPackageId;
           }
-        }
-        else {
+        } else {
           if (addNew) {
-            _CurrentDependencies.Add(dependencyToWrite.TargetPackageId,dependencyToWrite.TargetPackageId);
+            _CurrentDependencies.Add(dependencyToWrite.TargetPackageId, dependencyToWrite.TargetPackageId);
           }
         }
       }

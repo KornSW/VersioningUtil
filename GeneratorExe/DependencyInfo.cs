@@ -15,6 +15,7 @@ namespace Versioning {
 
     public DependencyInfo() {
     }
+
     public DependencyInfo(string targetPackageId, string targetPackageVersionConstraint) {
       this.TargetPackageId = targetPackageId;
       this.TargetPackageVersionConstraint = new VersionContraint(targetPackageVersionConstraint);
