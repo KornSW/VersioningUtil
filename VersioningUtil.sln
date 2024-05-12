@@ -5,6 +5,12 @@ VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "kVersioningUtil", "GeneratorExe\kVersioningUtil.csproj", "{33222FC8-33CB-452F-A2FA-BE09BE0BA347}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{8DDA4A84-B64B-4BD5-862C-B18219F75832}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{473BDE58-C483-44D1-8358-706774860CFC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kVersioningUtilTests", "dotnet\test\kVersioningUtilTests\kVersioningUtilTests.csproj", "{17C60109-7ECE-485A-97AF-6FC59C636DB7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,9 +21,17 @@ Global
 		{33222FC8-33CB-452F-A2FA-BE09BE0BA347}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{33222FC8-33CB-452F-A2FA-BE09BE0BA347}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{33222FC8-33CB-452F-A2FA-BE09BE0BA347}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17C60109-7ECE-485A-97AF-6FC59C636DB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17C60109-7ECE-485A-97AF-6FC59C636DB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17C60109-7ECE-485A-97AF-6FC59C636DB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17C60109-7ECE-485A-97AF-6FC59C636DB7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{33222FC8-33CB-452F-A2FA-BE09BE0BA347} = {8DDA4A84-B64B-4BD5-862C-B18219F75832}
+		{17C60109-7ECE-485A-97AF-6FC59C636DB7} = {473BDE58-C483-44D1-8358-706774860CFC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {027A7C67-3159-4068-879D-ED7F0B8FA35F}

@@ -45,8 +45,7 @@ namespace FileIO {
       var matchInfoVers = Regex.Matches(rawContent, _RegexSearchInfoVers).FirstOrDefault();
       if (matchInfoVers != null) {
         versionInfo.currentVersionWithSuffix = matchInfoVers.Value.Substring(39, matchInfoVers.Value.Length - 41);
-      }
-      else {
+      } else {
         versionInfo.CurrentVersionAndPrereleaseSuffix2CurrentVersionWithSuffix();
       }
 

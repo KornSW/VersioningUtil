@@ -4,7 +4,28 @@ namespace Versioning {
 
   public class VersionInfo {
 
+    public String changeGrade { get; set; } = "initial";
+
+    public int currentMajor { get; set; } = 0;
+    
+    public int currentMinor { get; set; } = 0;
+    
+    // HACK: es sollte "patch" heißen!
+    public int currentFix { get; set; } = 0;
+
+    public String currentVersion { get; set; } = "0.0.0";
+    
     public String currentVersionWithSuffix { get; set; } = "0.0.0";
+
+    public String preReleaseSuffix { get; set; } = "";
+    
+    public String previousVersion { get; set; } = "0.0.0";
+
+    public String versionNotes { get; set; } = "";
+
+    public String versionDateInfo { get; set; } = "1900-01-01";
+
+    public String versionTimeInfo { get; set; } = "00:00:00";
 
     public void CurrentVersionAndPrereleaseSuffix2CurrentVersionWithSuffix() {
       ParseVersion(this.currentVersion, out int maj, out int min, out int fix, out string preReleaseSuffix);
@@ -21,10 +42,7 @@ namespace Versioning {
         this.CurrentVersion2VersionPartFields();
       }
     }
-
-    public String preReleaseSuffix { get; set; } = "";
-    public String currentVersion { get; set; } = "0.0.0";
-
+    
     public void VersionPartFields2CurrentVersion(bool alsoUpdateCurrentVersionWithSuffix = true) {
       this.currentVersion = $"{currentMajor}.{currentMinor}.{currentFix}";
       if (alsoUpdateCurrentVersionWithSuffix) {
@@ -37,10 +55,6 @@ namespace Versioning {
       currentMinor = min;
       currentFix = fix;
     }
-
-    public int currentMajor { get; set; } = 0;
-    public int currentMinor { get; set; } = 0;
-    public int currentFix { get; set; } = 0;
 
     /// <summary>
     ///  increases currentMajor AND sets currentMinor+currentPatch to ZERO
@@ -79,11 +93,7 @@ namespace Versioning {
         this.VersionPartFields2CurrentVersion(true);
       }
     }
-
-    public String previousVersion { get; set; } = "0.0.0";
-
-    public String changeGrade { get; set; } = "initial";
-
+    
     public void RecalculateChangeGradeBasedOnPreviousVersion() {
       ParseVersion(previousVersion, out int pMaj, out int pMin, out int pFix, out string pPreReleaseSuffix);
       ParseVersion(currentVersion, out int cMaj, out int cMin, out int cFix, out string cPreReleaseSuffix);
@@ -97,11 +107,7 @@ namespace Versioning {
         changeGrade = "initial";
       }
     }
-
-    public String versionTimeInfo { get; set; } = "00:00:00";
-    public String versionDateInfo { get; set; } = "1900-01-01";
-    public String versionNotes { get; set; } = "";
-
+    
     #region " Helpers "
 
     private static void ParseVersion(string version, out int major, out int minor, out int fix, out string preReleaseSuffix) {

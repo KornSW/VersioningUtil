@@ -109,29 +109,29 @@ namespace Versioning {
     }
 
     /// <summary>
-    /// Uses a given changeLogFile a leading database to store the current version of an product as
-    /// well as a list of upcomming changes, that will lead to a new version.
-    /// SAMPLE: CreateNewVersionOnChangelog "myPackage.nuspec" "changelog.md"
-    /// NOTE: if you want to patch more than a single 'package.json' or '.nuspec' file,
-    /// then you need to use the 'ImportVersion' command afterwards (it supports minimatch-patterns)
+    ///   Uses a given changeLogFile a leading database to store the current version of an product as
+    ///   well as a list of upcomming changes, that will lead to a new version.
+    ///   SAMPLE: CreateNewVersionOnChangelog "myPackage.nuspec" "changelog.md"
+    ///   NOTE: if you want to patch more than a single 'package.json' or '.nuspec' file,
+    ///   then you need to use the 'ImportVersion' command afterwards (it supports minimatch-patterns)
     /// </summary>
     /// <param name="targetFile">
-    /// a single file name, which can be 
-    /// a 'package.json' file in NPM format (must exist and will be patched) OR
-    /// a '.nuspec' file in NuGetFormat (must exist and will be patched) OR
-    /// any '.json' filename (will be overwritten!) using a simple json structure defined by this tool
+    ///   a single file name, which can be 
+    ///   a 'package.json' file in NPM format (must exist and will be patched) OR
+    ///   a '.nuspec' file in NuGetFormat (must exist and will be patched) OR
+    ///   any '.json' filename (will be overwritten!) using a simple json structure defined by this tool
     /// </param>
     /// <param name="changeLogFile">
-    /// A 'changelog.md' file, that has a special structure (the initial one will be created automatically!)
+    ///   A 'changelog.md' file, that has a special structure (the initial one will be created automatically!)
     /// </param>
     /// <param name="preReleaseSemantic">
-    /// if specified, the versioning logic will create a so called 'prerelease' using the given string a semantical label
+    ///   if specified, the versioning logic will create a so called 'prerelease' using the given string a semantical label
     /// </param>
     /// <param name="ignoreSemantic">
-    /// can be used to define a blacklist of semantical names, that should NOT be treated as pre-release.
-    /// This is very helpfull, if youre using this tool inside of a build-pipeline and passing the branch-name to the
-    /// preReleaseSemantic parameter. Then youll be able to declare that branch names via ignoreSemantic parameter,
-    /// which are representing regular releases!
+    ///   can be used to define a blacklist of semantical names, that should NOT be treated as pre-release.
+    ///   This is very helpfull, if youre using this tool inside of a build-pipeline and passing the branch-name to the
+    ///   preReleaseSemantic parameter. Then youll be able to declare that branch names via ignoreSemantic parameter,
+    ///   which are representing regular releases!
     /// </param>
     public void CreateNewVersionOnChangelog (
       string targetFile = "versioninfo.json",
@@ -172,7 +172,7 @@ namespace Versioning {
         preReleaseSemantic = "";
       }
 
-      var info = MarkDownProcessor.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic);
+      VersionInfo info = MarkDownProcessor.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic);
 
       Console.WriteLine(info.currentVersionWithSuffix);
       Console.WriteLine("---");
