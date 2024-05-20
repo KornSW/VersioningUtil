@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Versioning.ShouldBeLibrary;
 
 namespace Versioning.TextProcessing {
 
@@ -11,35 +13,90 @@ namespace Versioning.TextProcessing {
 
       List<string> allLines = new List<string>();
 
+      string actualText, expectedText;
+
+      VersionInfo actualVersionInfo;
+
+      // Starting with empty text (except an existing start marker) => should create Version 0.1.0
+
       allLines.Add(Conventions.startMarker);
 
-      MarkDownProcessor.ProcessMarkdownAndCreateNewVersion(allLines);
+      actualVersionInfo = MarkDownProcessor.ProcessMarkdownAndCreateNewVersion(allLines);
 
-// [0] "# Change log"  
-// [1] "## Upcoming Changes" 
-// [2] ""  
-// [3] "*(none)*"  
-// [4] ""  
-// [5] ""  
-// [6] ""  
-// [7] "## v 0.1.0"  
-// [8] "released **2024-05-12**, including:" 
-// [9] " - new revision without significant changes" 
-// [10]  ""  
-// [11]  ""  
-// [12]  ""  
+      actualText = ListUtil.ToText(allLines);
 
-// changeGrade "fix" 
-// currentFix  0 int
-// currentMajor  0 int
-// currentMinor  1 int
-// currentVersion  "0.1.0" 
-// currentVersionWithSuffix  "0.1.0" 
-// preReleaseSuffix  ""  
-// previousVersion "0.0.0" 
-// versionDateInfo "2024-05-12"  
-// versionNotes  "- new revision without significant changes\r\n"  
-// versionTimeInfo "17:36:09"  
+      expectedText = (
+$@"# Change log
+## Upcoming Changes
+
+*(none)*
+
+
+
+## v 0.1.0
+released **{DateTime.Now:yyyy-MM-dd}**, including:
+ - new revision without significant changes
+
+
+
+"
+      );
+
+      Assert.AreEqual(expectedText, actualText);
+
+      Assert.AreEqual("fix", actualVersionInfo.changeGrade);
+      Assert.AreEqual(0, actualVersionInfo.currentMajor);
+      Assert.AreEqual(1, actualVersionInfo.currentMinor);
+      Assert.AreEqual(0, actualVersionInfo.currentFix);
+      Assert.AreEqual("0.1.0", actualVersionInfo.currentVersion);
+      Assert.AreEqual("0.1.0", actualVersionInfo.currentVersionWithSuffix);
+      Assert.AreEqual("", actualVersionInfo.preReleaseSuffix);
+      Assert.AreEqual("0.0.0", actualVersionInfo.previousVersion);
+      Assert.AreEqual($"{DateTime.Now:yyyy-MM-dd}", actualVersionInfo.versionDateInfo);
+      Assert.AreEqual("- new revision without significant changes\r\n", actualVersionInfo.versionNotes);
+
+      // Don't add any specific info, just recycle => should create Version 0.1.1
+
+      actualVersionInfo = MarkDownProcessor.ProcessMarkdownAndCreateNewVersion(allLines);
+
+      actualText = ListUtil.ToText(allLines);
+
+
+      expectedText = (
+$@"# Change log
+## Upcoming Changes
+
+*(none)*
+
+
+
+## v 0.1.1
+released **2024-05-20**, including:
+ - new revision without significant changes
+
+
+
+## v 0.1.0
+released **{DateTime.Now:yyyy-MM-dd}**, including:
+ - new revision without significant changes
+
+
+
+"
+      );
+
+      Assert.AreEqual(expectedText, actualText);
+
+      Assert.AreEqual("fix", actualVersionInfo.changeGrade);
+      Assert.AreEqual(0, actualVersionInfo.currentMajor);
+      Assert.AreEqual(1, actualVersionInfo.currentMinor);
+      Assert.AreEqual(1, actualVersionInfo.currentFix);
+      Assert.AreEqual("0.1.1", actualVersionInfo.currentVersion);
+      Assert.AreEqual("0.1.1", actualVersionInfo.currentVersionWithSuffix);
+      Assert.AreEqual("", actualVersionInfo.preReleaseSuffix);
+      Assert.AreEqual("0.1.0", actualVersionInfo.previousVersion);
+      Assert.AreEqual($"{DateTime.Now:yyyy-MM-dd}", actualVersionInfo.versionDateInfo);
+      Assert.AreEqual("- new revision without significant changes\r\n", actualVersionInfo.versionNotes);
 
     }
 

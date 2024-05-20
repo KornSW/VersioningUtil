@@ -111,7 +111,9 @@ namespace Versioning.CliHandling {
     }
 
     private string C2s(params char[] chars) {
+
       string result = string.Empty;
+
       foreach (char c in chars) {
         result = result + new string(c, 1);
       }
@@ -119,16 +121,20 @@ namespace Versioning.CliHandling {
     }
 
     protected virtual void Unterminate(ref string commandLine) {
+
       if (commandLine.Contains(C2s(_TerminatorChar, _TerminatorChar)))
         commandLine = commandLine.Replace(C2s(_TerminatorChar, _TerminatorChar), C2s(_TerminatorChar));
+
       if (commandLine.Contains(C2s(_TerminatorChar, _StringEncapsulationChar)))
         commandLine = commandLine.Replace(C2s(_TerminatorChar, _StringEncapsulationChar), C2s(_StringEncapsulationChar));
+
       if (commandLine.Contains(C2s(_TerminatorChar, _ArgumentSeparationChar)))
         commandLine = commandLine.Replace(C2s(_TerminatorChar, _ArgumentSeparationChar), C2s(_ArgumentSeparationChar));
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     protected const char _ArgumentSeparationChar = ' ';
+
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     protected static char[] _ArgParamSeparators = new[] { '=', ':' };
 

@@ -224,8 +224,8 @@ namespace Versioning.CliHandling {
     private void RebuildCommandCache() {
       _CommandCache.Clear();
       foreach (var target in _Targets) {
-        var methods = target.Item1.GetMethods();
-        foreach (var m in methods) {
+        MethodInfo[] methods = target.Item1.GetMethods();
+        foreach (MethodInfo m in methods) {
           if (!m.ContainsGenericParameters) {
             // no specialnames like proeprty-getters and no functions of system.object (like GetType or GetHashCode)
             if (!_CommandCache.ContainsKey(m.Name) && !m.IsSpecialName && m.DeclaringType != typeof(object))
@@ -275,9 +275,13 @@ namespace Versioning.CliHandling {
     }
 
     private List<string> _LineInputHistory = new List<string>();
+
     private Dictionary<string, CommandInvoker> _CommandCache = new Dictionary<string, CommandInvoker>();
+
     private int _LastFoistLineEndPosition = 0;
+
     private bool _ReadingLine = false;
+
     // Private _PromptLineInterrupted As Boolean = False
 
     public void WriteLine() {

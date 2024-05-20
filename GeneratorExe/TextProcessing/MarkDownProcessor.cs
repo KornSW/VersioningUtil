@@ -10,7 +10,7 @@ namespace Versioning.TextProcessing {
 
     public static VersionInfo ProcessMarkdownAndCreateNewVersion(List<string> allLines, string preReleaseSemantic = "") {
 
-      int startRowIndex = ListUtil.FindIndex(allLines, Conventions.startMarker);
+      int startRowIndex = ListUtil.FindRowIndex(allLines, Conventions.startMarker);
 
       if (startRowIndex < 0) throw new ApplicationException($"The given file does not contain the StartMarker '{Conventions.startMarker}'.");
 
@@ -20,7 +20,7 @@ namespace Versioning.TextProcessing {
 
       Version oldVersionOrPre = new Version(0, 0, 0);
 
-      int oldVersionRowIndex = ListUtil.FindIndex(allLines, Conventions.releasedVersionMarker);
+      int oldVersionRowIndex = ListUtil.FindRowIndex(allLines, Conventions.releasedVersionMarker);
 
       if (oldVersionRowIndex >= 0) {
         var oldVersionAsString = allLines[oldVersionRowIndex].TrimStart().Substring(Conventions.releasedVersionMarker.TrimStart().Length);
@@ -32,7 +32,7 @@ namespace Versioning.TextProcessing {
 
       // Look for "## Upcoming Changes" row ...
 
-      int upcommingChangesRowIndex = ListUtil.FindIndex(allLines, Conventions.upcommingChangesMarker);
+      int upcommingChangesRowIndex = ListUtil.FindRowIndex(allLines, Conventions.upcommingChangesMarker);
 
       if (upcommingChangesRowIndex < 0) { // ... doesn't exist => Insert one
         if (oldVersionRowIndex < 0) {
@@ -63,7 +63,7 @@ namespace Versioning.TextProcessing {
       // HACK: Ein MarkDown Aufzählungspunkt MUSS hier aus GENAU EINER ZEILE bestehen - er darf sich nicht über mehrere Zeilen erstrecken!
 
       var versionInfo = new VersionInfo {
-        changeGrade = "fix", // HACK: muss das nicht "patch" lauten?
+        changeGrade = "fix",
         versionDateInfo = DateTime.Now.ToString("yyyy-MM-dd"),
         versionTimeInfo = DateTime.Now.ToString("HH:mm:ss"),
         preReleaseSuffix = ""
@@ -219,7 +219,7 @@ namespace Versioning.TextProcessing {
         versionInfo.currentFix = 0;
       }
 
-      //last prerelese mit einbeziehen
+      // last prerelese mit einbeziehen
       if (wasPreReleased) {
 
         //var posWhenNewMeothThanPre = VersionCompare(

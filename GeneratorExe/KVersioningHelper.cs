@@ -66,7 +66,7 @@ namespace Versioning {
         allLines.Add(Conventions.upcommingChangesMarker);
       }
 
-      int upcommingChangesIndex = ListUtil.FindIndex(allLines, Conventions.upcommingChangesMarker);
+      int upcommingChangesIndex = ListUtil.FindRowIndex(allLines, Conventions.upcommingChangesMarker);
 
       System.Diagnostics.Process p = new System.Diagnostics.Process();
 
