@@ -905,7 +905,7 @@ namespace Versioning {
           }
           else if (currentLine.Contains(minorMarker, StringComparison.InvariantCultureIgnoreCase)) {
             if (!skipAdd) minorChanges.Add(currentLine.Trim());
-            if (versionInfo.changeGrade == "patch") {
+            if (versionInfo.changeGrade == "fix") {
               versionInfo.changeGrade = "minor";
             }
           }
