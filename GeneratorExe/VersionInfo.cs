@@ -10,7 +10,9 @@ namespace Versioning {
     
     public int currentMinor { get; set; } = 0;
     
-    // HACK: es sollte "patch" heißen!
+    /// <summary>
+    ///   Sometimes this is called "patch", but we prefer "fix".
+    /// </summary>
     public int currentFix { get; set; } = 0;
 
     public String currentVersion { get; set; } = "0.0.0";

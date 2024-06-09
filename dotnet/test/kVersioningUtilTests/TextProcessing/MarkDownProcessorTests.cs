@@ -6,14 +6,19 @@ using Versioning.ShouldBeLibrary;
 namespace Versioning.TextProcessing {
 
   [TestClass]
-  public class MarkDownProcessorTests {
+  public partial class MarkDownProcessorTests {
+
+    [ClassInitialize]
+    public static void InitializeOnceBeforeAllTests(TestContext context) {
+      MarkDownProcessor._OnGetTimeStamp = () => new DateTime(2024, 2, 1, 15, 16, 17);
+    }
 
     [TestMethod]
     public void ProcessMarkdownAndCreateNewVersion_VariousTestPatterns_ProduceExpectedResults() {
 
       List<string> allLines = new List<string>();
 
-      string actualText, expectedText;
+      string actualText;
 
       VersionInfo actualVersionInfo;
 
@@ -25,24 +30,7 @@ namespace Versioning.TextProcessing {
 
       actualText = ListUtil.ToText(allLines);
 
-      expectedText = (
-$@"# Change log
-## Upcoming Changes
-
-*(none)*
-
-
-
-## v 0.1.0
-released **{DateTime.Now:yyyy-MM-dd}**, including:
- - new revision without significant changes
-
-
-
-"
-      );
-
-      Assert.AreEqual(expectedText, actualText);
+      Assert.AreEqual(V010Expected, actualText);
 
       Assert.AreEqual("fix", actualVersionInfo.changeGrade);
       Assert.AreEqual(0, actualVersionInfo.currentMajor);
@@ -52,7 +40,7 @@ released **{DateTime.Now:yyyy-MM-dd}**, including:
       Assert.AreEqual("0.1.0", actualVersionInfo.currentVersionWithSuffix);
       Assert.AreEqual("", actualVersionInfo.preReleaseSuffix);
       Assert.AreEqual("0.0.0", actualVersionInfo.previousVersion);
-      Assert.AreEqual($"{DateTime.Now:yyyy-MM-dd}", actualVersionInfo.versionDateInfo);
+      Assert.AreEqual("2024-02-01", actualVersionInfo.versionDateInfo);
       Assert.AreEqual("- new revision without significant changes\r\n", actualVersionInfo.versionNotes);
 
       // Don't add any specific info, just recycle => should create Version 0.1.1
@@ -61,31 +49,7 @@ released **{DateTime.Now:yyyy-MM-dd}**, including:
 
       actualText = ListUtil.ToText(allLines);
 
-
-      expectedText = (
-$@"# Change log
-## Upcoming Changes
-
-*(none)*
-
-
-
-## v 0.1.1
-released **2024-05-20**, including:
- - new revision without significant changes
-
-
-
-## v 0.1.0
-released **{DateTime.Now:yyyy-MM-dd}**, including:
- - new revision without significant changes
-
-
-
-"
-      );
-
-      Assert.AreEqual(expectedText, actualText);
+      Assert.AreEqual(V011Expected, actualText);
 
       Assert.AreEqual("fix", actualVersionInfo.changeGrade);
       Assert.AreEqual(0, actualVersionInfo.currentMajor);
@@ -95,7 +59,7 @@ released **{DateTime.Now:yyyy-MM-dd}**, including:
       Assert.AreEqual("0.1.1", actualVersionInfo.currentVersionWithSuffix);
       Assert.AreEqual("", actualVersionInfo.preReleaseSuffix);
       Assert.AreEqual("0.1.0", actualVersionInfo.previousVersion);
-      Assert.AreEqual($"{DateTime.Now:yyyy-MM-dd}", actualVersionInfo.versionDateInfo);
+      Assert.AreEqual("2024-02-01", actualVersionInfo.versionDateInfo);
       Assert.AreEqual("- new revision without significant changes\r\n", actualVersionInfo.versionNotes);
 
     }

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Versioning.CliHandling;
+
+[assembly: InternalsVisibleTo("kVersioningUtilTests")]
 
 namespace Versioning {
 

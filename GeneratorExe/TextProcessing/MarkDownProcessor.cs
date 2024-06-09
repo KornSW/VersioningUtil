@@ -8,6 +8,18 @@ namespace Versioning.TextProcessing {
 
   public class MarkDownProcessor {
 
+    /// <summary>
+    ///   Test API. Inject a predictable methon
+    /// </summary>
+    internal static Func<DateTime> _OnGetTimeStamp = () => DateTime.Now;
+
+    /// <summary>
+    ///   Increases the version within a markdown text based on conventions.
+    /// </summary>
+    /// <param name="allLines"> A markdown text as list of string. This is the source and the target of the modification at the same time. </param>
+    /// <param name="preReleaseSemantic">???</param>
+    /// <returns> A new VersionInfo instance. </returns>
+    /// <exception cref="ApplicationException"> If the markdown text doesn't contain a StartMarker. </exception>
     public static VersionInfo ProcessMarkdownAndCreateNewVersion(List<string> allLines, string preReleaseSemantic = "") {
 
       int startRowIndex = ListUtil.FindRowIndex(allLines, Conventions.startMarker);
@@ -16,16 +28,16 @@ namespace Versioning.TextProcessing {
 
       // Fetch the old version from the first line containing "## v "...
 
-      Version oldVersion = new Version(0, 0, 0);
+      Version previousVersion = new Version(0, 0, 0);
 
       Version oldVersionOrPre = new Version(0, 0, 0);
 
-      int oldVersionRowIndex = ListUtil.FindRowIndex(allLines, Conventions.releasedVersionMarker);
+      int previousVersionRowIndex = ListUtil.FindRowIndex(allLines, Conventions.releasedVersionMarker);
 
-      if (oldVersionRowIndex >= 0) {
-        var oldVersionAsString = allLines[oldVersionRowIndex].TrimStart().Substring(Conventions.releasedVersionMarker.TrimStart().Length);
-        Version.TryParse(oldVersionAsString, out oldVersion);
-        oldVersionOrPre = oldVersion;
+      if (previousVersionRowIndex >= 0) {
+        var previousVersionAsString = allLines[previousVersionRowIndex].TrimStart().Substring(Conventions.releasedVersionMarker.TrimStart().Length);
+        Version.TryParse(previousVersionAsString, out previousVersion);
+        oldVersionOrPre = previousVersion;
       }
 
       bool wasPreReleased = false;
@@ -34,16 +46,16 @@ namespace Versioning.TextProcessing {
 
       int upcommingChangesRowIndex = ListUtil.FindRowIndex(allLines, Conventions.upcommingChangesMarker);
 
-      if (upcommingChangesRowIndex < 0) { // ... doesn't exist => Insert one
-        if (oldVersionRowIndex < 0) {
-          allLines.Add(Conventions.upcommingChangesMarker);//+ " (not yet released)");
+      if (upcommingChangesRowIndex < 0) { // ... doesn't exist => Insert one...
+        if (previousVersionRowIndex < 0) {
+          allLines.Add(Conventions.upcommingChangesMarker); // ... at the end of the text
           upcommingChangesRowIndex = allLines.Count - 1;
         } else {
-          allLines.Insert(oldVersionRowIndex, Conventions.upcommingChangesMarker);// + " (not yet released)");
-          upcommingChangesRowIndex = oldVersionRowIndex;
-          oldVersionRowIndex++;
+          allLines.Insert(previousVersionRowIndex, Conventions.upcommingChangesMarker);// ... before the first line containing "## v "
+          upcommingChangesRowIndex = previousVersionRowIndex;
+          previousVersionRowIndex++;
         }
-      } else { // ... found => 
+      } else { // ... found => ??? some voodoo with pre release stuff ???
         string upcommingChangesLineRightPart = allLines[upcommingChangesRowIndex].TrimStart().Substring(Conventions.upcommingChangesMarker.TrimStart().Length).Trim();
         if (upcommingChangesLineRightPart.StartsWith("(")) {
           upcommingChangesLineRightPart = upcommingChangesLineRightPart.Substring(1);
@@ -54,18 +66,20 @@ namespace Versioning.TextProcessing {
         }
       }
 
-      if (oldVersionRowIndex < 0) {
-        oldVersionRowIndex = allLines.Count();//nirvana
+      if (previousVersionRowIndex < 0) {
+        previousVersionRowIndex = allLines.Count(); // nirvana
       }
 
       // read the section between "## Upcoming Changes" and "## v " => collect rows and group them
 
       // HACK: Ein MarkDown Aufzählungspunkt MUSS hier aus GENAU EINER ZEILE bestehen - er darf sich nicht über mehrere Zeilen erstrecken!
 
+      DateTime releaseTimeStamp = _OnGetTimeStamp.Invoke();
+
       var versionInfo = new VersionInfo {
         changeGrade = "fix",
-        versionDateInfo = DateTime.Now.ToString("yyyy-MM-dd"),
-        versionTimeInfo = DateTime.Now.ToString("HH:mm:ss"),
+        versionDateInfo = releaseTimeStamp.ToString("yyyy-MM-dd"),
+        versionTimeInfo = releaseTimeStamp.ToString("HH:mm:ss"),
         preReleaseSuffix = ""
       };
 
@@ -80,7 +94,7 @@ namespace Versioning.TextProcessing {
 
       bool mpvReachedTrigger = false;
 
-      for (int i = (upcommingChangesRowIndex + 1); i < oldVersionRowIndex; i++) {
+      for (int i = (upcommingChangesRowIndex + 1); i < previousVersionRowIndex; i++) {
 
         bool skipAdd = false;
 
@@ -136,7 +150,7 @@ namespace Versioning.TextProcessing {
       // alle alten zeilen löschen
 
       allLines.RemoveRange(upcommingChangesRowIndex + 1, linecount);
-      oldVersionRowIndex -= linecount;
+      previousVersionRowIndex -= linecount;
 
       // alle zeilen neu einfügen
 
@@ -149,7 +163,7 @@ namespace Versioning.TextProcessing {
         allLines.Insert(insertAt, " - " + info.Replace(Conventions.majorMarker, "**" + Conventions.majorMarker + "**"));
         versionNotes.AppendLine("- " + info);
         insertAt++;
-        oldVersionRowIndex++;
+        previousVersionRowIndex++;
       }
       foreach (var minorChange in minorChanges) {
         var info = minorChange.Trim();
@@ -158,7 +172,7 @@ namespace Versioning.TextProcessing {
         allLines.Insert(insertAt, " - " + info.Replace(Conventions.minorMarker, "**" + Conventions.minorMarker + "**"));
         versionNotes.AppendLine("- " + info);
         insertAt++;
-        oldVersionRowIndex++;
+        previousVersionRowIndex++;
       }
       foreach (var patchChange in patchChanges) {
         var info = patchChange.Trim();
@@ -167,7 +181,7 @@ namespace Versioning.TextProcessing {
         allLines.Insert(insertAt, " - " + info);
         versionNotes.AppendLine("- " + info);
         insertAt++;
-        oldVersionRowIndex++;
+        previousVersionRowIndex++;
       }
 
       //zusatzzeilen
@@ -176,17 +190,17 @@ namespace Versioning.TextProcessing {
       allLines.Insert(insertAt, "");
       allLines.Insert(insertAt, "");
       insertAt += 3;
-      oldVersionRowIndex += 3;
+      previousVersionRowIndex += 3;
 
       versionInfo.versionNotes = versionNotes.ToString();
 
-      versionInfo.currentMajor = oldVersion.Major;
-      versionInfo.currentMinor = oldVersion.Minor;
-      versionInfo.currentFix = oldVersion.Build;
+      versionInfo.currentMajor = previousVersion.Major;
+      versionInfo.currentMinor = previousVersion.Minor;
+      versionInfo.currentFix = previousVersion.Build;
 
-      var preAlreadyIncreasedMajor = (oldVersion.Major < oldVersionOrPre.Major);
-      var preAlreadyIncreasedMinor = (oldVersion.Minor < oldVersionOrPre.Minor);
-      var preAlreadyIncreasedPatch = (oldVersion.Build < oldVersionOrPre.Build);
+      var preAlreadyIncreasedMajor = (previousVersion.Major < oldVersionOrPre.Major);
+      var preAlreadyIncreasedMinor = (previousVersion.Minor < oldVersionOrPre.Minor);
+      var preAlreadyIncreasedPatch = (previousVersion.Build < oldVersionOrPre.Build);
 
       //höhere version berechnen
 
@@ -245,7 +259,7 @@ namespace Versioning.TextProcessing {
 
       Version currentVersion = new Version(versionInfo.currentMajor, versionInfo.currentMinor, versionInfo.currentFix);
       versionInfo.currentVersion = currentVersion.ToString(3);
-      versionInfo.previousVersion = oldVersion.ToString(3);
+      versionInfo.previousVersion = previousVersion.ToString(3);
 
       // neue version setzen
 
