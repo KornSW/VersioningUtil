@@ -24,7 +24,7 @@ namespace FileIO {
     }
 
     public void WriteVersion(VersionInfo versionInfo) {
-      string rawJson = JsonSerializer.Serialize(this, _JsonOpt);
+      string rawJson = JsonSerializer.Serialize(versionInfo, _JsonOpt);
       using (FileStream fs = new FileStream(_FileFullName, FileMode.Create, FileAccess.Write)) {
         using (StreamWriter sw = new StreamWriter(fs, Encoding.Default)) {
           sw.WriteLine(rawJson);
