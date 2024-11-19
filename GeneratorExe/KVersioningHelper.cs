@@ -326,6 +326,7 @@ namespace Versioning {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           VersionInfo vers = tgt.ReadVersion();
           vers.preReleaseSuffix = prereleaseSuffix;
+          vers.VersionPartFields2CurrentVersion(true);
           tgt.WriteVersion(vers);
         }
         catch (Exception ex) {
