@@ -309,6 +309,32 @@ namespace Versioning {
 
     }
 
+    public void SetPrerelease(
+      string prereleaseSuffix,
+      string targetFilesToProcess
+    ) {
+
+      prereleaseSuffix = prereleaseSuffix.Replace("\"", "");
+      if(prereleaseSuffix.StartsWith("-")) {
+        prereleaseSuffix = prereleaseSuffix.Substring(1);
+      }
+        
+      string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
+      foreach (var fileFullName in allFileFullNames) {
+        Console.WriteLine($"Processing '{fileFullName}'...");
+        try {
+          IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
+          VersionInfo vers = tgt.ReadVersion();
+          vers.preReleaseSuffix = prereleaseSuffix;
+          tgt.WriteVersion(vers);
+        }
+        catch (Exception ex) {
+          Console.WriteLine(ex.Message);
+        }
+      }
+
+    }
+
     /// <summary>
     /// SAMPLE: SetVersion "1.2.3-alpha" "**\*.csproj;**\*.vbproj;**\MyProject\AssemblyInfo.cs;**\MyProject\AssemblyInfo.vb;"
     /// </summary>
