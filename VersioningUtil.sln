@@ -5,6 +5,14 @@ VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "kVersioningUtil", "GeneratorExe\kVersioningUtil.csproj", "{33222FC8-33CB-452F-A2FA-BE09BE0BA347}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{68C39D00-A925-43AB-9092-76C2960E05BA}"
+	ProjectSection(SolutionItems) = preProject
+		doc\Calculate ChangeLog-based version & Patch.json = doc\Calculate ChangeLog-based version & Patch.json
+		doc\changelog.md = doc\changelog.md
+		doc\Commit ChangeLog-based version into Repo.json = doc\Commit ChangeLog-based version into Repo.json
+		doc\install-latest-kvu.ps1 = doc\install-latest-kvu.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

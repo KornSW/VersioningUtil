@@ -217,7 +217,7 @@
   "modifiedOn": "2025-02-11T06:43:46.623Z",
   "comment": "",
   "id": "82da1c9b-f703-453a-8caa-727a73545d12",
-  "name": "3. Calculate Versioning & Patch [g3]",
+  "name": "Calculate ChangeLog-based version & Patch",
   "version": {
     "major": 1,
     "minor": 0,
@@ -225,7 +225,7 @@
     "isTest": false
   },
   "iconUrl": "https://cdn.vsassets.io/v/M235_20240303.1/_content/icon-meta-task.png",
-  "friendlyName": "Calculate Versioning & Patch [g3]",
+  "friendlyName": "Calculate ChangeLog-based version & Patch",
   "description": "",
   "category": "Build",
   "definitionType": "metaTask",
@@ -249,7 +249,7 @@
   "satisfies": [],
   "sourceDefinitions": [],
   "dataSourceBindings": [],
-  "instanceNameFormat": "Calculate Versioning & Patch [g3]",
+  "instanceNameFormat": "Calculate ChangeLog-based version & Patch",
   "preJobExecution": {},
   "execution": {},
   "postJobExecution": {},

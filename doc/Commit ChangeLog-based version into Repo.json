@@ -1,0 +1,89 @@
+{
+  "tasks": [
+    {
+      "environment": {},
+      "displayName": "Commit Changes ",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "script": "git config --global user.email \"$(CommittingUserEmail)\"\ngit config --global user.name \"$(CommittingUserName)\"\n\nfor /f \"tokens=*\" %%i in ('git log -1 --pretty^=format:\"%%s\"') do set LAST_COMMIT_MESSAGE=%%i\n\ngit add ./doc/\ngit add ./vers/\ngit commit -m \"%LAST_COMMIT_MESSAGE% -> VERSIONING [skip ci]\"\ngit push origin HEAD:$(build.SourceBranchName)\n",
+        "workingDirectory": "./",
+        "failOnStderr": "false"
+      },
+      "task": {
+        "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      }
+    }
+  ],
+  "runsOn": [ "Agent", "DeploymentGroup" ],
+  "revision": 3,
+  "createdBy": {
+    "displayName": "KornSW",
+    "id": "51931ae9-b4a9-64a2-b342-411cfb60ad15",
+    "uniqueName": "tobias@kornsw.de"
+  },
+  "createdOn": "2024-02-06T07:59:27.173Z",
+  "modifiedBy": {
+    "displayName": "KornSW",
+    "id": "51931ae9-b4a9-64a2-b342-411cfb60ad15",
+    "uniqueName": "tobias@kornsw.de"
+  },
+  "modifiedOn": "2024-12-23T12:02:57.003Z",
+  "comment": "",
+  "id": "6a3d5e78-c00a-4e66-876e-efb29078f600",
+  "name": "Commit ChangeLog-based version into Repo",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "isTest": false
+  },
+  "iconUrl": "https://cdn.vsassets.io/v/M221_20230519.1/_content/icon-meta-task.png",
+  "friendlyName": "Commit ChangeLog-based version into Repo",
+  "description": "REQUIRES that the 'Agent Job' 'Allows script to access the OAuth token'",
+  "category": "Build",
+  "definitionType": "metaTask",
+  "author": "KornSW",
+  "demands": [],
+  "groups": [],
+  "inputs": [
+    {
+      "aliases": [],
+      "options": {},
+      "properties": {},
+      "name": "CommittingUserEmail",
+      "label": "CommittingUserEmail",
+      "defaultValue": "email@mycompany.de",
+      "required": true,
+      "type": "string",
+      "helpMarkDown": "used for the commit",
+      "groupName": ""
+    },
+    {
+      "aliases": [],
+      "options": {},
+      "properties": {},
+      "name": "CommittingUserName",
+      "label": "CommittingUserName",
+      "defaultValue": "CI Build",
+      "required": true,
+      "type": "string",
+      "helpMarkDown": "used for the commit",
+      "groupName": ""
+    }
+  ],
+  "satisfies": [],
+  "sourceDefinitions": [],
+  "dataSourceBindings": [],
+  "instanceNameFormat": "Commit ChangeLog-based version into Repo",
+  "preJobExecution": {},
+  "execution": {},
+  "postJobExecution": {},
+  "_buildConfigMapping": {}
+}
