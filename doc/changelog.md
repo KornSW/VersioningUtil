@@ -6,9 +6,15 @@
 
 ## Upcoming Changes
 
-* updated AzureDevops Taskgroup-Template
+*(none)*
 
-  
+
+
+## v 2.4.2
+released **2025-02-11**, including:
+ - updated AzureDevops Taskgroup-Template
+
+
 
 ## v 2.4.1
 released **2025-02-11**, including:

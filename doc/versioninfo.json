@@ -1,13 +1,13 @@
 {
-  "currentVersion": "2.4.1",
-  "currentVersionWithSuffix": "2.4.1",
+  "currentVersion": "2.4.2",
+  "currentVersionWithSuffix": "2.4.2",
   "releaseType": "",
-  "previousVersion": "2.4.0",
+  "previousVersion": "2.4.1",
   "changeGrade": "fix",
   "currentMajor": 2,
   "currentMinor": 4,
-  "currentPatch": 1,
+  "currentPatch": 2,
   "versionDateInfo": "2025-02-11",
-  "versionTimeInfo": "06:59:37",
-  "versionNotes": "- switched to automatic-versioning\n"
+  "versionTimeInfo": "07:15:40",
+  "versionNotes": "- updated AzureDevops Taskgroup-Template\n"
 }
