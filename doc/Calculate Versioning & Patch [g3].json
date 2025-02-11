@@ -1,0 +1,257 @@
+{
+  "tasks": [
+    {
+      "environment": {},
+      "displayName": "Install latest KVU",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "targetType": "inline",
+        "filePath": "",
+        "arguments": "",
+        "script": "$repo = \"KornSW/VersioningUtil\"\n$localToolsDir = \"C:\\kvu\"\nmkdir $localToolsDir \n\nWrite-Host Determining latest release\n$releases = \"https://api.github.com/repos/$repo/releases\"\n$tag = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].tag_name\n\nWrite-Host Dowloading latest release\nInvoke-WebRequest \"https://github.com/$repo/releases/download/$tag/kvu.exe\"                 -Out \"$localToolsDir\\kvu.exe\"\nInvoke-WebRequest \"https://github.com/$repo/releases/download/$tag/kvu.deps.json\"           -Out \"$localToolsDir\\kvu.deps.json\"\nInvoke-WebRequest \"https://github.com/$repo/releases/download/$tag/kvu.dll\"                 -Out \"$localToolsDir\\kvu.dll\"\nInvoke-WebRequest \"https://github.com/$repo/releases/download/$tag/kvu.pdb\"                 -Out \"$localToolsDir\\kvu.pdb\"\nInvoke-WebRequest \"https://github.com/$repo/releases/download/$tag/kvu.runtimeconfig.json\"  -Out \"$localToolsDir\\kvu.runtimeconfig.json\"\nInvoke-WebRequest \"https://github.com/$repo/releases/download/$tag/kvu.exe\"                 -Out \"$localToolsDir\\kvu.xml\"\n\nWrite-Host Registering to PATH\n$oldpath = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name PATH).path\n$newpath = \"$localToolsDir;$oldpath\" \nSet-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name PATH -Value $newpath\nWrite-Host \"##vso[task.prependpath]$localToolsDir\"\n\n",
+        "errorActionPreference": "stop",
+        "warningPreference": "default",
+        "informationPreference": "default",
+        "verbosePreference": "default",
+        "debugPreference": "default",
+        "progressPreference": "silentlyContinue",
+        "failOnStderr": "false",
+        "showWarnings": "false",
+        "ignoreLASTEXITCODE": "false",
+        "pwsh": "false",
+        "workingDirectory": "",
+        "runScriptInSeparateScope": "false"
+      },
+      "task": {
+        "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Version erzeugen (doc\\versioninfo.json)",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "script": "kvu CreateNewVersionOnChangelog \".\\doc\\versioninfo.json\" \".\\doc\\changelog.md\" $(Build.SourceBranchName) \"$(PrimaryBranchName)\"",
+        "workingDirectory": "",
+        "failOnStderr": "false"
+      },
+      "task": {
+        "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Versioning: 'versioninfo.json' stagen",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "SourceFolder": "./doc",
+        "Contents": "versioninfo.json",
+        "TargetFolder": "$(Build.ArtifactStagingDirectory)/",
+        "CleanTargetFolder": "false",
+        "OverWrite": "false",
+        "flattenFolders": "false",
+        "preserveTimestamp": "false",
+        "retryCount": "0",
+        "delayBetweenRetries": "1000",
+        "ignoreMakeDirErrors": "false"
+      },
+      "task": {
+        "id": "5bfb729a-a7c8-4a78-a7c3-8d717bb7c13c",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Versioning: 'versioninfo.json' veröffentlichen",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "PathtoPublish": "$(Build.ArtifactStagingDirectory)/versioninfo.json",
+        "ArtifactName": "version",
+        "ArtifactType": "Container",
+        "MaxArtifactSize": "0",
+        "TargetPath": "",
+        "Parallel": "false",
+        "ParallelCount": "8",
+        "StoreAsTar": "false"
+      },
+      "task": {
+        "id": "2ff763a7-ce83-4e1f-bc89-0ae63477cebe",
+        "versionSpec": "1.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Versioning: Einlesen der Buildvariable 'build.currentVersion'",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "variableName": "build.currentVersion",
+        "jsonPathExpression": "currentVersion",
+        "json": "",
+        "jsonFile": "./doc/versioninfo.json"
+      },
+      "task": {
+        "id": "d73a7ad0-8a20-46a4-83e8-9287aa024183",
+        "versionSpec": "0.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Versioning: Einlesen der Buildvariable 'build.currentVersionWithSuffix'",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "variableName": "build.currentVersionWithSuffix",
+        "jsonPathExpression": "currentVersionWithSuffix",
+        "json": "",
+        "jsonFile": "./doc/versioninfo.json"
+      },
+      "task": {
+        "id": "d73a7ad0-8a20-46a4-83e8-9287aa024183",
+        "versionSpec": "0.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Update BuildNumber",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "targetType": "inline",
+        "filePath": "",
+        "arguments": "",
+        "script": "Write-Host \"##vso[build.updatebuildnumber]$(build.currentVersionWithSuffix)\"",
+        "errorActionPreference": "stop",
+        "warningPreference": "default",
+        "informationPreference": "default",
+        "verbosePreference": "default",
+        "debugPreference": "default",
+        "progressPreference": "silentlyContinue",
+        "failOnStderr": "false",
+        "showWarnings": "false",
+        "ignoreLASTEXITCODE": "false",
+        "pwsh": "false",
+        "workingDirectory": "",
+        "runScriptInSeparateScope": "false"
+      },
+      "task": {
+        "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      }
+    },
+    {
+      "environment": {},
+      "displayName": "Version in Dateien Patchen",
+      "alwaysRun": false,
+      "continueOnError": false,
+      "condition": "succeeded()",
+      "enabled": true,
+      "timeoutInMinutes": 0,
+      "retryCountOnTaskFailure": 0,
+      "inputs": {
+        "script": "\nkvu ImportVersion \"**\\*.vbproj\" \".\\doc\\versioninfo.json\"\nkvu ImportVersion \"**\\*.csproj\" \".\\doc\\versioninfo.json\"\nkvu ImportVersion \"**\\*.nuspec\" \".\\doc\\versioninfo.json\"\nkvu ImportVersion \"**\\package.json\" \".\\doc\\versioninfo.json\"",
+        "workingDirectory": "",
+        "failOnStderr": "false"
+      },
+      "task": {
+        "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      }
+    }
+  ],
+  "runsOn": [ "Agent", "DeploymentGroup" ],
+  "revision": 2,
+  "createdBy": {
+    "displayName": "KornSW",
+    "id": "51931ae9-b4a9-64a2-b342-411cfb60ad15",
+    "uniqueName": "tobias@kornsw.de"
+  },
+  "createdOn": "2025-02-11T06:41:34.187Z",
+  "modifiedBy": {
+    "displayName": "KornSW",
+    "id": "51931ae9-b4a9-64a2-b342-411cfb60ad15",
+    "uniqueName": "tobias@kornsw.de"
+  },
+  "modifiedOn": "2025-02-11T06:43:46.623Z",
+  "comment": "",
+  "id": "82da1c9b-f703-453a-8caa-727a73545d12",
+  "name": "3. Calculate Versioning & Patch [g3]",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "isTest": false
+  },
+  "iconUrl": "https://cdn.vsassets.io/v/M235_20240303.1/_content/icon-meta-task.png",
+  "friendlyName": "Calculate Versioning & Patch [g3]",
+  "description": "",
+  "category": "Build",
+  "definitionType": "metaTask",
+  "author": "KornSW",
+  "demands": [],
+  "groups": [],
+  "inputs": [
+    {
+      "aliases": [],
+      "options": {},
+      "properties": {},
+      "name": "PrimaryBranchName",
+      "label": "PrimaryBranchName",
+      "defaultValue": "master",
+      "required": true,
+      "type": "string",
+      "helpMarkDown": "all other Branches will lead to 'prerelease' Versions",
+      "groupName": ""
+    }
+  ],
+  "satisfies": [],
+  "sourceDefinitions": [],
+  "dataSourceBindings": [],
+  "instanceNameFormat": "Calculate Versioning & Patch [g3]",
+  "preJobExecution": {},
+  "execution": {},
+  "postJobExecution": {},
+  "_buildConfigMapping": {}
+}
