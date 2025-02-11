@@ -1,0 +1,13 @@
+{
+  "currentVersion": "2.4.1",
+  "currentVersionWithSuffix": "2.4.1",
+  "releaseType": "",
+  "previousVersion": "2.4.0",
+  "changeGrade": "fix",
+  "currentMajor": 2,
+  "currentMinor": 4,
+  "currentPatch": 1,
+  "versionDateInfo": "2025-02-11",
+  "versionTimeInfo": "06:59:37",
+  "versionNotes": "- switched to automatic-versioning\n"
+}
