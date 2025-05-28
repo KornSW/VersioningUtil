@@ -10,6 +10,12 @@
 
 
 
+## v 2.4.3
+released **2025-05-28**, including:
+ - new revision without significant changes
+
+
+
 ## v 2.4.2
 released **2025-02-11**, including:
  - updated AzureDevops Taskgroup-Template
