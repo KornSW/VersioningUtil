@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Utils;
 using Versioning;
 
@@ -22,18 +23,12 @@ namespace Versioning {
     public void ImportGitCommentsIntoChangelog(
       string versioninfoFile = "versioninfo.json",
       string changeLogFile = "changelog.md",
-      string ignoreBySubstring = "(last version"
+      string ignoreBySubstring = "VERSIONING"
     ) {
 
+      string lastVersionTag = "";
       DateTime lastVersionTime = DateTime.MinValue;
-      IVersionContainer src = InitializeVersionContainerByFileType(versioninfoFile);
-      if (src != null) {
-        VersionInfo vers = src.ReadVersion();
-        if(!DateTime.TryParse(vers.versionDateInfo + " " + vers.versionTimeInfo,out lastVersionTime)) {
-          Console.WriteLine($"Versioninfo file '{versioninfoFile}' does not contain valid time information!");
-          return;
-        }
-      }
+      this.TryLoadVersionAndDateFromVersioninfoFile(versioninfoFile, out lastVersionTag, out lastVersionTime);
 
       if(lastVersionTime == DateTime.MinValue) {
         Console.WriteLine($"Importing comments from GIT-History since repository creation:");     
@@ -48,7 +43,7 @@ namespace Versioning {
       }
       changeLogFile = Path.GetFullPath(changeLogFile);
 
-      var allLines = new List<string>();
+      var allLinesOfChanglogFile = new List<string>();
 
       using (FileStream fs = new FileStream(changeLogFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite)) {
         using (StreamReader sr = new StreamReader(fs, Encoding.Default)) {
@@ -57,61 +52,116 @@ namespace Versioning {
             if (line == null) {
               break;
             }
-            allLines.Add(line);
+            allLinesOfChanglogFile.Add(line);
           };
         }
       }
 
-      bool fileIsNew = (allLines.Count() == 0);
+      bool fileIsNew = (allLinesOfChanglogFile.Count() == 0);
       if (fileIsNew) {
-        allLines.Add(startMarker);
-        allLines.Add("This files contains a version history including all changes relevant for semantic versioning...");
-        allLines.Add("*(it is automatically maintained using the ['KornSW-VersioningUtil'](https://github.com/KornSW/VersioningUtil))*");
-        allLines.Add("");
-        allLines.Add("");
-        allLines.Add(upcommingChangesMarker);
+        allLinesOfChanglogFile.Add(startMarker);
+        allLinesOfChanglogFile.Add("This files contains a version history including all changes relevant for semantic versioning...");
+        allLinesOfChanglogFile.Add("*(it is automatically maintained using the ['KornSW-VersioningUtil'](https://github.com/KornSW/VersioningUtil))*");
+        allLinesOfChanglogFile.Add("");
+        allLinesOfChanglogFile.Add("");
+        allLinesOfChanglogFile.Add(upcommingChangesMarker);
       }
 
-      int upcommingChangesIndex = FindIndex(allLines, upcommingChangesMarker);
+      int upcommingChangesIndex = FindIndex(allLinesOfChanglogFile, upcommingChangesMarker);
 
-      System.Diagnostics.Process p = new System.Diagnostics.Process();
+      if (string.IsNullOrWhiteSpace(lastVersionTag)) {
+        int idx = FindIndex(allLinesOfChanglogFile, releasedVersionMarker, upcommingChangesIndex);
+        if(idx > 0) {
+          string latestReleasedVersionLine = allLinesOfChanglogFile[idx];
+          lastVersionTag = latestReleasedVersionLine.Substring(releasedVersionMarker.Length).Trim();
+        }
+      }
 
-      p.StartInfo.FileName = "git";
-      p.StartInfo.UseShellExecute = false;
-      //file:///C:/Program%20Files/Git/mingw64/share/doc/git-doc/git-log.html
-      p.StartInfo.Arguments = "log --no-decorate --pretty=format:[%ai]%s";
-      p.StartInfo.CreateNoWindow = true;
-      p.StartInfo.RedirectStandardOutput = true;
-      p.StartInfo.RedirectStandardError = true;
+      bool success = this.GetGitHistorySinceTag(
+        (commitDate, commitMessage) => {
+          allLinesOfChanglogFile.Insert(upcommingChangesIndex + 1, "* " + commitMessage);
+        },
+        lastVersionTag,
+        lastVersionTime,
+        ignoreBySubstring
+      );
 
-      p.EnableRaisingEvents = true;
-      p.Start();
-      var output = p.StandardOutput.ReadToEnd();
+      File.WriteAllLines(changeLogFile, allLinesOfChanglogFile.ToArray(), Encoding.Default);
 
-      var hsr = new StringReader(output);
-      string historyline = hsr.ReadLine();
-      while (!string.IsNullOrWhiteSpace(historyline)) {
-        if (historyline.StartsWith("[")){
-          string datePart = historyline.Substring(1,19); //[2024-02-16 16:28:37 +0100]
-          string subject = historyline.Substring(27);
-          if(string.IsNullOrWhiteSpace(ignoreBySubstring) || !subject.Contains(ignoreBySubstring)) {
-            if(DateTime.Parse(datePart) > lastVersionTime) {
-              Console.WriteLine(datePart + ": " + subject);
-              allLines.Insert(upcommingChangesIndex + 1, "* " + subject);
+    }
+
+    public void GetGitHistorySinceTag(string startAfterTag = "", DateTime startAfterDate = default, string ignoreBySubstring = "VERSIONING") {
+      this.GetGitHistorySinceTag((d,m) => { }, startAfterTag, startAfterDate, ignoreBySubstring);
+    }
+
+    private bool GetGitHistorySinceTag(Action<DateTime, string> callback, string startAfterTag = "", DateTime startAfterDate = default, string ignoreBySubstring = "VERSIONING") {
+      try {
+
+        System.Diagnostics.Process p = new System.Diagnostics.Process();
+
+        string tagFilter = string.Empty;
+        if (!string.IsNullOrWhiteSpace(startAfterTag)) {
+          tagFilter = $"{startAfterTag}..HEAD";
+        }
+
+        p.StartInfo.FileName = "git";
+        p.StartInfo.UseShellExecute = false;
+        p.StartInfo.Arguments = $"log {tagFilter} --pretty=format:[%ai]%s";
+        p.StartInfo.CreateNoWindow = true;
+        p.StartInfo.RedirectStandardOutput = true;
+        p.StartInfo.RedirectStandardError = true;
+        p.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
+        p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+
+        p.EnableRaisingEvents = true;
+
+        Console.WriteLine("Fetching GIT-History: git " + p.StartInfo.Arguments);
+
+        p.Start();
+
+        string output = p.StandardOutput.ReadToEnd();
+        string error = p.StandardError.ReadToEnd();
+
+        if (string.IsNullOrWhiteSpace(output)) {
+
+          if (!string.IsNullOrWhiteSpace(error)) {
+            if (error.Contains("unknown revision") && !string.IsNullOrWhiteSpace(startAfterTag)) {
+              Console.WriteLine($"WARNING: given Tag '{startAfterTag}' seems to be unknown - ignoring it!");
+              return GetGitHistorySinceTag(callback, default, startAfterDate, ignoreBySubstring);
             }
           }
- 
+
+          Console.WriteLine($"ERROR FROM GIT-COMMAND: {error}");
+          return false;
         }
-        historyline = hsr.ReadLine();
+
+        var hsr = new StringReader(output);
+        string historyline = hsr.ReadLine();
+        while (!string.IsNullOrWhiteSpace(historyline)) {
+
+          if(!string.IsNullOrWhiteSpace(historyline) && historyline.StartsWith("[")) {
+
+            string commitDateString = historyline.Substring(1, 19); //[2024-02-16 16:28:37 +0100]
+            DateTime commitDate = DateTime.Parse(commitDateString);
+            string commitMessage = historyline.Substring(27).Replace("[skip ci]", "").Trim();
+
+            if (string.IsNullOrWhiteSpace(ignoreBySubstring) || !commitMessage.Contains(ignoreBySubstring)) {
+              if (commitDate > startAfterDate) { 
+                Console.WriteLine($" {commitDate:yyyy-MM-dd} {commitDate:HH:mm} - {commitMessage}");
+                callback.Invoke(commitDate, commitMessage);
+              }
+            }
+          }
+
+          historyline = hsr.ReadLine();
+        }
+        return true;
+
       }
-
-      //using (StreamReader s = p.StandardError) {
-      //  string error = s.ReadToEnd();
-      //  p.WaitForExit(20000);
-      //}
-
-      File.WriteAllLines(changeLogFile, allLines.ToArray(), Encoding.Default);
-
+      catch (Exception ex) {
+        Console.WriteLine("ERROR: " + ex.Message);
+        return false;
+      }
     }
 
     /// <summary>
@@ -178,7 +228,12 @@ namespace Versioning {
         preReleaseSemantic = "";
       }
 
-      var info = KVersioningHelper.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic);
+      VersionInfo info = KVersioningHelper.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic, (string lastVersion) => {
+        //onNoChangesFound
+        List<string> gitHistoryLines = new List<string>();
+        this.GetGitHistorySinceTag((d,msg)=> gitHistoryLines.Add(msg), lastVersion, default);
+        return gitHistoryLines.ToArray();
+      });
 
       Console.WriteLine(info.currentVersionWithSuffix);
       Console.WriteLine("---");
@@ -221,7 +276,7 @@ namespace Versioning {
             sw.WriteLine($"  \"currentPatch\": {info.currentFix},");
             sw.WriteLine($"  \"versionDateInfo\": \"{info.versionDateInfo}\",");
             sw.WriteLine($"  \"versionTimeInfo\": \"{info.versionTimeInfo}\",");
-            sw.WriteLine($"  \"versionNotes\": \"{info.versionNotes.Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"")}\"");
+            sw.WriteLine($"  \"versionNotes\": \"{info.versionNotes.Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Replace("\\", "\\\\")}\"");
             sw.WriteLine("}");
             sw.Flush();
           }
@@ -852,7 +907,12 @@ namespace Versioning {
     static string minorMarker = "new Feature";
     static string majorMarker = "breaking Change";
 
-    private static VersionInfo ProcessMarkdownAndCreateNewVersion(List<string> allLines, string preReleaseSemantic = "") {
+    private static VersionInfo ProcessMarkdownAndCreateNewVersion(
+      List<string> allLines,
+      string preReleaseSemantic = "",    
+      Func<string, string[]> fallbackChangesEvaluator = null
+    ) {
+
       var versionInfo = new VersionInfo();
       versionInfo.changeGrade = "fix";
       versionInfo.versionDateInfo = DateTime.Now.ToString("yyyy-MM-dd");
@@ -873,8 +933,10 @@ namespace Versioning {
       int upcommingChangesIndex = FindIndex(allLines, upcommingChangesMarker);
       int releasedVersionIndex = FindIndex(allLines, releasedVersionMarker);
 
+      string lastVersionString = null;
       if (releasedVersionIndex >= 0) {
-        var lastVersionString = allLines[releasedVersionIndex].TrimStart().Substring(releasedVersionMarker.TrimStart().Length);
+        lastVersionString = allLines[releasedVersionIndex].TrimStart().Substring(releasedVersionMarker.TrimStart().Length);
+        Console.WriteLine($"Last version found within Changelog-File: '{lastVersionString}'");
         Version.TryParse(lastVersionString, out lastVersion);
         lastVersionOrPre = lastVersion;
       }
@@ -907,15 +969,30 @@ namespace Versioning {
       }
 
       int changes = 0;
-      int linecount = 0;
+      int upcommingLinesToRemoveCount = 0;
       var patchChanges = new List<string>();
       var minorChanges = new List<string>();
       var majorChanges = new List<string>();
       string mvpTriggerMessage = null;
 
+      List<string> relevantChangesLines = new List<string>();
       for (int i = (upcommingChangesIndex + 1); i < releasedVersionIndex; i++) {
+        if(!string.IsNullOrWhiteSpace(allLines[i]) && allLines[i].Trim() != "*(none)*") {
+          relevantChangesLines.Add(allLines[i]);
+        }
+        upcommingLinesToRemoveCount++;
+      }
+
+      //fallback (z.b. auf git-history)
+      if (relevantChangesLines.Count() == 0 && fallbackChangesEvaluator != null) {
+        Console.WriteLine("No changes found in the changelog, trying to evaluate changes from git history...");
+        relevantChangesLines = fallbackChangesEvaluator.Invoke(lastVersionString).ToList();
+      }
+
+      foreach (string relevantChangesLine in relevantChangesLines) {
         bool skipAdd = false;
-        string currentLine = allLines[i].Replace("**" + minorMarker + "**", minorMarker).Replace("**" + majorMarker + "**", majorMarker);
+
+        string currentLine = relevantChangesLine.Replace("**" + minorMarker + "**", minorMarker).Replace("**" + majorMarker + "**", majorMarker);
         if (currentLine.Contains(mpvReachedTriggerWord, StringComparison.InvariantCultureIgnoreCase)) {
           mpvReachedTrigger = true;
           skipAdd = true;
@@ -941,20 +1018,19 @@ namespace Versioning {
           }
           changes++;
         }
-        linecount++;
       }
 
       if (changes == 0) {
-        string assumedChange = "* new revision without significant changes";
+        string assumedChange = "* New revision without significant changes";
         patchChanges.Add(assumedChange);
         //allLines.Insert(releasedVersionIndex, assumedChange);
         //releasedVersionIndex++;
         changes = 1;
       }
       else {
-        patchChanges.Sort(StringComparer.OrdinalIgnoreCase);
-        minorChanges.Sort(StringComparer.OrdinalIgnoreCase);
-        majorChanges.Sort(StringComparer.OrdinalIgnoreCase);
+        //patchChanges.Sort(StringComparer.OrdinalIgnoreCase);
+        //minorChanges.Sort(StringComparer.OrdinalIgnoreCase);
+        //majorChanges.Sort(StringComparer.OrdinalIgnoreCase);
         if (mvpTriggerMessage != null) {
           //ganz nach oben!!!
           majorChanges.Insert(0, mvpTriggerMessage);
@@ -962,14 +1038,14 @@ namespace Versioning {
       }
 
       //alle alten zeilen lschen
-      allLines.RemoveRange(upcommingChangesIndex + 1, linecount);
-      releasedVersionIndex -= linecount;
+      allLines.RemoveRange(upcommingChangesIndex + 1, upcommingLinesToRemoveCount);
+      releasedVersionIndex -= upcommingLinesToRemoveCount;
 
       //alle zeilen neu einfügen
-      var versionNotes = new StringBuilder();
-      var insertAt = upcommingChangesIndex + 1;
-      foreach (var majorChange in majorChanges) {
-        var info = majorChange.Trim();
+      StringBuilder versionNotes = new StringBuilder();
+      int insertAt = upcommingChangesIndex + 1;
+      foreach (string majorChange in majorChanges) {
+        string info = majorChange.Trim();
         if (info.StartsWith("* ")) { info = info.Substring(1).Trim(); }
         if (info.StartsWith("- ")) { info = info.Substring(1).Trim(); }
         allLines.Insert(insertAt, " - " + info.Replace(majorMarker, "**" + majorMarker + "**"));
@@ -977,8 +1053,8 @@ namespace Versioning {
         insertAt++;
         releasedVersionIndex++;
       }
-      foreach (var minorChange in minorChanges) {
-        var info = minorChange.Trim();
+      foreach (string minorChange in minorChanges) {
+        string info = minorChange.Trim();
         if (info.StartsWith("* ")) { info = info.Substring(1).Trim(); }
         if (info.StartsWith("- ")) { info = info.Substring(1).Trim(); }
         allLines.Insert(insertAt, " - " + info.Replace(minorMarker, "**" + minorMarker + "**"));
@@ -986,8 +1062,8 @@ namespace Versioning {
         insertAt++;
         releasedVersionIndex++;
       }
-      foreach (var patchChange in patchChanges) {
-        var info = patchChange.Trim();
+      foreach (string patchChange in patchChanges) {
+        string info = patchChange.Trim();
         if (info.StartsWith("* ")) { info = info.Substring(1).Trim(); }
         if (info.StartsWith("- ")) { info = info.Substring(1).Trim(); }
         allLines.Insert(insertAt, " - " + info);
@@ -1149,6 +1225,23 @@ namespace Versioning {
     }
 
     #endregion
+
+    private bool TryLoadVersionAndDateFromVersioninfoFile(
+      string versioninfoFile,
+      out string currentVersionWithSuffix,
+      out DateTime currentVersionDateTime
+    ) {
+      IVersionContainer src = InitializeVersionContainerByFileType(versioninfoFile);
+      if (src != null && File.Exists(versioninfoFile)) {
+        VersionInfo vers = src.ReadVersion();
+        currentVersionWithSuffix = vers.currentVersionWithSuffix;
+        return DateTime.TryParse(vers.versionDateInfo + " " + vers.versionTimeInfo, out currentVersionDateTime);
+      }
+      currentVersionWithSuffix = null;
+      currentVersionDateTime = default;
+      return false;
+    }
+
 
   }
 

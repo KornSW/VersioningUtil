@@ -343,3 +343,4 @@ AzureDevOpsExtension/**/versioninfo.json
 AzureDevOpsExtension/**/changelog.md
 AzureDevOpsExtension/*.vsix
 AzureDevOpsExtension/**/*.lnk
+/**/vendor/nuget
