@@ -94,76 +94,6 @@ namespace Versioning {
       this.GetGitHistorySinceTag((d,m) => { }, startAfterTag, startAfterDate, ignoreBySubstring);
     }
 
-    private bool GetGitHistorySinceTag(Action<DateTime, string> callback, string startAfterTag = "", DateTime startAfterDate = default, string ignoreBySubstring = "VERSIONING") {
-      try {
-
-        System.Diagnostics.Process p = new System.Diagnostics.Process();
-
-        string tagFilter = string.Empty;
-        if (!string.IsNullOrWhiteSpace(startAfterTag)) {
-          tagFilter = $"{startAfterTag}..HEAD";
-        }
-
-        p.StartInfo.FileName = "git";
-        p.StartInfo.UseShellExecute = false;
-        p.StartInfo.Arguments = $"log {tagFilter} --pretty=format:[%ai]%s";
-        p.StartInfo.CreateNoWindow = true;
-        p.StartInfo.RedirectStandardOutput = true;
-        p.StartInfo.RedirectStandardError = true;
-        p.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
-        p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
-
-        p.EnableRaisingEvents = true;
-
-        Console.WriteLine("Fetching GIT-History: git " + p.StartInfo.Arguments);
-
-        p.Start();
-
-        string output = p.StandardOutput.ReadToEnd();
-        string error = p.StandardError.ReadToEnd();
-
-        if (string.IsNullOrWhiteSpace(output)) {
-
-          if (!string.IsNullOrWhiteSpace(error)) {
-            if (error.Contains("unknown revision") && !string.IsNullOrWhiteSpace(startAfterTag)) {
-              Console.WriteLine($"WARNING: given Tag '{startAfterTag}' seems to be unknown - ignoring it!");
-              return GetGitHistorySinceTag(callback, default, startAfterDate, ignoreBySubstring);
-            }
-          }
-
-          Console.WriteLine($"ERROR FROM GIT-COMMAND: {error}");
-          return false;
-        }
-
-        var hsr = new StringReader(output);
-        string historyline = hsr.ReadLine();
-        while (!string.IsNullOrWhiteSpace(historyline)) {
-
-          if(!string.IsNullOrWhiteSpace(historyline) && historyline.StartsWith("[")) {
-
-            string commitDateString = historyline.Substring(1, 19); //[2024-02-16 16:28:37 +0100]
-            DateTime commitDate = DateTime.Parse(commitDateString);
-            string commitMessage = historyline.Substring(27).Replace("[skip ci]", "").Trim();
-
-            if (string.IsNullOrWhiteSpace(ignoreBySubstring) || !commitMessage.Contains(ignoreBySubstring)) {
-              if (commitDate > startAfterDate) { 
-                Console.WriteLine($" {commitDate:yyyy-MM-dd} {commitDate:HH:mm} - {commitMessage}");
-                callback.Invoke(commitDate, commitMessage);
-              }
-            }
-          }
-
-          historyline = hsr.ReadLine();
-        }
-        return true;
-
-      }
-      catch (Exception ex) {
-        Console.WriteLine("ERROR: " + ex.Message);
-        return false;
-      }
-    }
-
     /// <summary>
     /// Uses a given changeLogFile a leading database to store the current version of an product as
     /// well as a list of upcomming changes, that will lead to a new version.
@@ -896,6 +826,127 @@ namespace Versioning {
         return Regex.IsMatch(stringToEvaluate, expressionString);
     }
 
+    private bool TryLoadVersionAndDateFromVersioninfoFile(
+      string versioninfoFile,
+      out string currentVersionWithSuffix,
+      out DateTime currentVersionDateTime
+    ) {
+
+      IVersionContainer src = InitializeVersionContainerByFileType(versioninfoFile);
+      if (src != null && File.Exists(versioninfoFile)) {
+        VersionInfo vers = src.ReadVersion();
+        currentVersionWithSuffix = vers.currentVersionWithSuffix;
+        return DateTime.TryParse(vers.versionDateInfo + " " + vers.versionTimeInfo, out currentVersionDateTime);
+      }
+
+      currentVersionWithSuffix = null;
+      currentVersionDateTime = default;
+
+      return false;
+    }
+
+    private bool GetGitHistorySinceTag(Action<DateTime, string> callback, string startAfterTag = "", DateTime startAfterDate = default, string ignoreBySubstring = "VERSIONING") {
+      try {
+
+        System.Diagnostics.Process p = new System.Diagnostics.Process();
+
+        string tagFilter = string.Empty;
+        if (!string.IsNullOrWhiteSpace(startAfterTag)) {
+          tagFilter = $"{startAfterTag}..HEAD";
+        }
+
+        p.StartInfo.FileName = "git";
+        p.StartInfo.UseShellExecute = false;
+        p.StartInfo.Arguments = $"log {tagFilter} --pretty=format:[%ai]%s";
+        p.StartInfo.CreateNoWindow = true;
+        p.StartInfo.RedirectStandardOutput = true;
+        p.StartInfo.RedirectStandardError = true;
+        p.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
+        p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+
+        p.EnableRaisingEvents = true;
+
+        Console.WriteLine("Fetching GIT-History: git " + p.StartInfo.Arguments);
+
+        p.Start();
+
+        string output = p.StandardOutput.ReadToEnd();
+        string error = p.StandardError.ReadToEnd();
+
+        if (string.IsNullOrWhiteSpace(output)) {
+
+          if (!string.IsNullOrWhiteSpace(error)) {
+            if (error.Contains("unknown revision") && !string.IsNullOrWhiteSpace(startAfterTag)) {
+              Console.WriteLine($"WARNING: given Tag '{startAfterTag}' seems to be unknown - ignoring it!");
+              return GetGitHistorySinceTag(callback, default, startAfterDate, ignoreBySubstring);
+            }
+          }
+
+          Console.WriteLine($"ERROR FROM GIT-COMMAND: {error}");
+          return false;
+        }
+
+        var hsr = new StringReader(output);
+        string historyline = hsr.ReadLine();
+        while (!string.IsNullOrWhiteSpace(historyline)) {
+
+          if (!string.IsNullOrWhiteSpace(historyline) && historyline.StartsWith("[")) {
+
+            string commitDateString = historyline.Substring(1, 19); //[2024-02-16 16:28:37 +0100]
+            DateTime commitDate = DateTime.Parse(commitDateString);
+            string commitMessage = historyline.Substring(27).Replace("[skip ci]", "").Trim();
+
+            if (string.IsNullOrWhiteSpace(ignoreBySubstring) || !commitMessage.Contains(ignoreBySubstring)) {
+              if (commitDate > startAfterDate) {
+                Console.WriteLine($" {commitDate:yyyy-MM-dd} {commitDate:HH:mm} - {commitMessage}");
+                callback.Invoke(commitDate, commitMessage);
+              }
+            }
+          }
+
+          historyline = hsr.ReadLine();
+        }
+        return true;
+
+      }
+      catch (Exception ex) {
+        Console.WriteLine("ERROR: " + ex.Message);
+        return false;
+      }
+    }
+
+    private string RunCommandline(string executableFilename, string arguments, string workDir = default) {
+
+      System.Diagnostics.Process p = new System.Diagnostics.Process();
+
+      p.StartInfo.FileName = executableFilename;
+      if (!string.IsNullOrWhiteSpace(workDir)) {
+        p.StartInfo.WorkingDirectory = workDir;
+      }
+      p.StartInfo.UseShellExecute = false;
+      p.StartInfo.Arguments = arguments;
+      p.StartInfo.CreateNoWindow = true;
+      p.StartInfo.RedirectStandardOutput = true;
+      p.StartInfo.RedirectStandardError = true;
+      p.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
+      p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+
+      p.EnableRaisingEvents = true;
+
+      Console.WriteLine($"Executing: {executableFilename} {arguments}");
+
+      p.Start();
+
+      string output = p.StandardOutput.ReadToEnd();
+      string error = p.StandardError.ReadToEnd();
+
+      if (string.IsNullOrWhiteSpace(output)) {
+        throw new Exception("ERROR from StdErr: " + error);
+      }
+
+      return output;
+    }
+
     #endregion
 
     #region " MD Processing "
@@ -1226,22 +1277,136 @@ namespace Versioning {
 
     #endregion
 
-    private bool TryLoadVersionAndDateFromVersioninfoFile(
-      string versioninfoFile,
-      out string currentVersionWithSuffix,
-      out DateTime currentVersionDateTime
-    ) {
-      IVersionContainer src = InitializeVersionContainerByFileType(versioninfoFile);
-      if (src != null && File.Exists(versioninfoFile)) {
-        VersionInfo vers = src.ReadVersion();
-        currentVersionWithSuffix = vers.currentVersionWithSuffix;
-        return DateTime.TryParse(vers.versionDateInfo + " " + vers.versionTimeInfo, out currentVersionDateTime);
+    #region " NugetUpdates "
+
+    /// <summary>
+    /// Runs the 'dotnet add'-command for .NET core projects or the 'nuget.exe' for .NET framework projects to
+    /// update a NuGet-Package and respects the packages-folder for the given solution-file!
+    /// </summary>
+    /// <param name="solutionFiles">
+    /// multiple minimatch-patterns (separated by ;) to address one or more .sln-files
+    /// </param>
+    /// <param name="packageId"></param>
+    /// <param name="newPackageVersion"></param>
+    public void UpdateNugetPackages(string solutionFiles, string packageId, string newPackageVersion) {
+
+      string[] slnFileFullNames = this.ListFiles(solutionFiles);
+
+      foreach( string slnFileFullName in slnFileFullNames) {
+        Console.WriteLine($"Processing SOLUTION '{slnFileFullName}'...");
+        string packagesFolder =  SlnFileHelper.GetPackagesFolderFullPath(slnFileFullName);
+        string slnFolder = Path.GetDirectoryName(slnFileFullName);
+        string nugetConfig = Path.Combine(slnFolder, "nuget.config");
+
+        Console.WriteLine("   Packages: " + packagesFolder);
+
+        string[] projFileFullNames = SlnFileHelper.GetProjectFileFullNames(slnFileFullName);
+
+        foreach (string projFileFullName in projFileFullNames) {
+
+          Console.Write($"   Processing PROJECT '{Path.GetFileName(projFileFullName)}'...  ");
+          if (File.Exists(projFileFullName)) {
+            var projFile = new VsProjFileAccessor(projFileFullName);
+
+            if (projFile.IsDotNetCoreFormat()) {
+              Console.WriteLine($"     (.NET CORE)");
+
+
+
+
+              //TODO: dann noch die feeds hinbekommen!!!!
+              continue;
+
+
+              //really true - they missed to implement an 'update'-command - so we need to do a pre-check
+              //before we can use the 'add'-command!
+              string[] installedPackageNames = this.ListInstalledPackages(projFileFullName);
+              if (!installedPackageNames.Contains(packageId)) {
+                continue;
+              }
+
+              if (string.IsNullOrWhiteSpace(newPackageVersion)) {
+                Console.WriteLine(RunCommandline("C:\\Program Files\\dotnet\\dotnet.exe",
+                  $"add \"{projFileFullName}\" package {packageId} ", slnFolder)//--package-directory \"{packagesFolder}\" ")
+                );
+
+               
+              }
+              else { 
+                Console.WriteLine(RunCommandline("C:\\Program Files\\dotnet\\dotnet.exe",
+                  $"add \"{projFileFullName}\" package {packageId} --version {newPackageVersion} ", slnFolder)//--package-directory \"{packagesFolder}\" ")
+                );
+
+
+
+
+                //--configfile \"{nugetConfig}\"
+              }
+
+            }
+            else {
+              Console.WriteLine($"     (.NET Framework)");
+
+              //string packagesConfigFullName = Path.Combine(Path.GetDirectoryName(projFileFullName), "packages.config");
+
+              try {
+                if (string.IsNullOrWhiteSpace(newPackageVersion)) {
+                  Console.WriteLine(RunCommandline("C:\\GIT\\BCGer\\Build\\nuget_6.7.0.exe",
+                    $"update \"{projFileFullName}\" -id {packageId} -RepositoryPath \"{packagesFolder}\"  -Verbosity detailed", slnFolder)//-ConfigFile \"{nugetConfig}\"
+                  );
+                }
+                else {
+                  Console.WriteLine(RunCommandline("C:\\GIT\\BCGer\\Build\\nuget_6.7.0.exe",
+                    $"update \"{projFileFullName}\" -id {packageId} -Version {newPackageVersion} -RepositoryPath \"{packagesFolder}\" -Verbosity detailed", slnFolder)
+                  );
+                }
+              }
+              catch (Exception ex) {
+                Console.WriteLine($"ERROR: {ex.Message}");
+                continue;
+              }
+
+            }
+          }
+          else {
+            Console.WriteLine($"     (NOT EXISITING !!!)");
+          }
+
+        }
+
       }
-      currentVersionWithSuffix = null;
-      currentVersionDateTime = default;
-      return false;
+
     }
 
+    private string[] ListInstalledPackages(string netCoreProjectName) {
+
+      string rawOutput = RunCommandline(
+        "C:\\Program Files\\dotnet\\dotnet.exe",
+         $"dotnet list \"{netCoreProjectName}\" package"
+      );
+      var packageNames = new List<string>();
+
+      using(var reader = new StringReader(rawOutput)) {
+        string line = reader.ReadLine();
+        while (!string.IsNullOrWhiteSpace(line)) {
+          line = line.Trim();
+          if (line.StartsWith(">")) {
+            line = line.Substring(1).TrimStart();
+            line = line.Substring(0, line.IndexOf(" "));
+            packageNames.Add(line);
+          }
+          line = reader.ReadLine();
+        }
+      }
+
+      return packageNames.ToArray();
+    }
+
+   // Rune uget 
+     
+   // run .netcore
+
+    #endregion
 
   }
 
