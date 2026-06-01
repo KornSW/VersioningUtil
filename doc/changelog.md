@@ -6,7 +6,7 @@
 
 ## Upcoming Changes
 
-*(none)*
+Fix: Constraint-calculator in mode 'SEM-SAFE' are aware of special case for 0.x.x (non-mvp-) versions to set upper bound to 2.0.0 instead of 1.0.0
 
 
 

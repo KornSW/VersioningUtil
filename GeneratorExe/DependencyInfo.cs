@@ -10,17 +10,20 @@ using System.Text.Json;
 
 namespace Versioning {
 
-  [DebuggerDisplay("{TargetPackageId} {TargetPackageVersionConstraint}")]
+  [DebuggerDisplay("{TargetPackageId} {TargetPackageVersionConstraint} {DedicatedToTargetFramework}")]
   public class DependencyInfo {
 
     public DependencyInfo() {
     }
+
     public DependencyInfo(string targetPackageId, string targetPackageVersionConstraint) {
       this.TargetPackageId = targetPackageId;
       this.TargetPackageVersionConstraint = new VersionContraint(targetPackageVersionConstraint);
     }
 
     public String TargetPackageId { get; set; } = null;
+
+    public String DedicatedToTargetFramework { get; set; } = null;
 
     public VersionContraint TargetPackageVersionConstraint { get; set; } = null;
 
@@ -136,9 +139,20 @@ namespace Versioning {
       if (vt.Length > 1) {
         semver = semver + "-" + vt[1];
       }
+
+      int noHigherMajorThan = major + 1;
+      if (noHigherMajorThan == 1) {
+        //special case for non-mvp-version 0, because 0.x.y is not stable and
+        //can have breaking changes in minor versions, so we need to set the
+        //upper bound to < 2.0.0] to allow regular transition to 1.0 in order
+        //to reduce efforts here (consumers of 0.x are aware of breaking changes)
+        noHigherMajorThan = 2;
+      }
+
       _ConstraintPattern = VersionContraint.GenerateConstraintPattern(
         true, semver, false, $"{major + 1}.0"
       );
+
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
