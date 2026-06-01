@@ -1,13 +1,13 @@
 {
-  "currentVersion": "2.4.3",
-  "currentVersionWithSuffix": "2.4.3",
+  "currentVersion": "2.4.4",
+  "currentVersionWithSuffix": "2.4.4",
   "releaseType": "",
-  "previousVersion": "2.4.2",
+  "previousVersion": "2.4.3",
   "changeGrade": "fix",
   "currentMajor": 2,
   "currentMinor": 4,
-  "currentPatch": 3,
-  "versionDateInfo": "2025-05-28",
-  "versionTimeInfo": "09:43:47",
-  "versionNotes": "- new revision without significant changes\n"
+  "currentPatch": 4,
+  "versionDateInfo": "2026-06-01",
+  "versionTimeInfo": "06:06:49",
+  "versionNotes": "- Fix: Constraint-calculator in mode 'SEM-SAFE' are aware of special case for 0.x.x (non-mvp-) versions to set upper bound to 2.0.0 instead of 1.0.0\n"
 }
