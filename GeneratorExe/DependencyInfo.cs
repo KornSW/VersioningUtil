@@ -150,7 +150,7 @@ namespace Versioning {
       }
 
       _ConstraintPattern = VersionContraint.GenerateConstraintPattern(
-        true, semver, false, $"{major + 1}.0"
+        true, semver, false, $"{noHigherMajorThan}.0"
       );
 
     }
