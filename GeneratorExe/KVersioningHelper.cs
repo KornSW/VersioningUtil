@@ -406,7 +406,7 @@ namespace Versioning {
     ) {
       try {
         IVersionContainer tgt = InitializeVersionContainerByFileType(fileToAnalyze);
-        var deps = tgt.ReadPackageDependencies();
+        var deps = tgt.ReadPackageDependencies(true).OrderBy(d => d.DedicatedToTargetFramework).ToArray();
         int len = 30;
         foreach (var dep in deps) {
           if(len < dep.TargetPackageId.Length) {
@@ -420,7 +420,14 @@ namespace Versioning {
           Console.Write("  ");
           Console.Write(dep.TargetPackageId);
           Console.Write(new string(' ', len - dep.TargetPackageId.Length));
-          Console.WriteLine(dep.TargetPackageVersionConstraint);
+          Console.Write(dep.TargetPackageVersionConstraint);
+          if (string.IsNullOrWhiteSpace(dep.DedicatedToTargetFramework)){
+            Console.WriteLine();
+          }
+          else {
+            Console.WriteLine($" [{dep.DedicatedToTargetFramework}]");
+          }
+           
         }
         Console.WriteLine();
         Console.WriteLine("-----------------------------------------------");
@@ -452,11 +459,15 @@ namespace Versioning {
     ///  "MIN": require the given version or any newer (including new major versions;
     ///  "EXACT": require exactly the given version  
     /// </param> 
+    /// <param name="onlyForTargetFramework">
+    ///  if set, then any dependency entries under the given targetFramework-group will be updated (e.g. 'net10.0' or '.NETFramework4.8') 
+    /// </param>
     public void CopyVersionToDependencyEntry(
       string refPackageId,
       string targetFilesToProcess,
       string metaDataSourceFile = "versioninfo.json",
-      string contraintType = "SEM-SAFE"
+      string contraintType = "SEM-SAFE",
+      string onlyForTargetFramework = null
     ) {
       IVersionContainer src = InitializeVersionContainerByFileType(metaDataSourceFile);
       if (src == null) {
@@ -464,7 +475,7 @@ namespace Versioning {
         return;
       }
       VersionInfo vers = src.ReadVersion();
-      this.SetVersionToDependencyEntry(refPackageId, vers.currentVersionWithSuffix, targetFilesToProcess, contraintType);
+      this.SetVersionToDependencyEntry(refPackageId, vers.currentVersionWithSuffix, targetFilesToProcess, contraintType, onlyForTargetFramework);
     }
 
     /// <summary>
@@ -485,11 +496,15 @@ namespace Versioning {
     ///  "MIN": require the given version or any newer (including new major versions;
     ///  "EXACT": require exactly the given version  
     /// </param>
+    /// <param name="onlyForTargetFramework">
+    ///  if set, then any dependency entries under the given targetFramework-group will be updated (e.g. 'net10.0' or '.NETFramework4.8') 
+    /// </param>
     public void SetVersionToDependencyEntry(
       string dependencyPackageId,
       string newDependentVersion,
       string targetFilesToProcess,
-      string contraintType = "SEM-SAFE"
+      string contraintType = "SEM-SAFE",
+      string onlyForTargetFramework = null
     ) {
       DependencyInfo dep = new DependencyInfo(dependencyPackageId, newDependentVersion);
       if (contraintType == "EXACT") {
@@ -504,20 +519,22 @@ namespace Versioning {
         dep.TargetPackageVersionConstraint.SetVersionShouldBeInNonBreakingRange(newDependentVersion);
       }
       this.SetVersionToDependencyEntryInternal(
-        targetFilesToProcess, false, true, false, dep
+        targetFilesToProcess, false, true, false, onlyForTargetFramework, dep
       );
     }
 
     private void SetVersionToDependencyEntryInternal(
       string targetFilesToProcess, bool addNew, bool updateExisiting, bool deleteOthers,
-      params DependencyInfo[] newDependencies
+      string onlyForTargetFramework, params DependencyInfo[] newDependencies
     ) {
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
-      foreach (var fileFullName in allFileFullNames) {
+      foreach (string fileFullName in allFileFullNames) {
         Console.WriteLine($"Processing '{fileFullName}'...");
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
-          tgt.WritePackageDependencies(newDependencies, addNew, updateExisiting, deleteOthers);
+          tgt.WritePackageDependencies(
+            newDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+          );
         }
         catch (Exception ex) {
           Console.WriteLine(ex.Message);
@@ -533,12 +550,13 @@ namespace Versioning {
       string contraintType = "KEEP",
       bool addNew = true,
       bool updateExisiting = true,
-      bool deleteOthers = false
+      bool deleteOthers = false,
+      string onlyForTargetFramework = null
     ) {
       DependencyInfo[] srcDependencies;
       try {
         IVersionContainer tgt = InitializeVersionContainerByFileType(sourceFileToReadDependencies);
-        srcDependencies = tgt.ReadPackageDependencies();
+        srcDependencies = tgt.ReadPackageDependencies(true);
       }
       catch (Exception ex) {
         Console.WriteLine(ex.Message);
@@ -571,7 +589,9 @@ namespace Versioning {
         }
       }
 
-      this.SetVersionToDependencyEntryInternal(targetFilesToUpdate, addNew, updateExisiting, deleteOthers, srcDependencies);
+      this.SetVersionToDependencyEntryInternal(
+        targetFilesToUpdate, addNew, updateExisiting, deleteOthers, onlyForTargetFramework, srcDependencies
+      );
     }
 
     /// <summary>
@@ -915,38 +935,6 @@ namespace Versioning {
       }
     }
 
-    private string RunCommandline(string executableFilename, string arguments, string workDir = default) {
-
-      System.Diagnostics.Process p = new System.Diagnostics.Process();
-
-      p.StartInfo.FileName = executableFilename;
-      if (!string.IsNullOrWhiteSpace(workDir)) {
-        p.StartInfo.WorkingDirectory = workDir;
-      }
-      p.StartInfo.UseShellExecute = false;
-      p.StartInfo.Arguments = arguments;
-      p.StartInfo.CreateNoWindow = true;
-      p.StartInfo.RedirectStandardOutput = true;
-      p.StartInfo.RedirectStandardError = true;
-      p.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
-      p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
-
-      p.EnableRaisingEvents = true;
-
-      Console.WriteLine($"Executing: {executableFilename} {arguments}");
-
-      p.Start();
-
-      string output = p.StandardOutput.ReadToEnd();
-      string error = p.StandardError.ReadToEnd();
-
-      if (string.IsNullOrWhiteSpace(output)) {
-        throw new Exception("ERROR from StdErr: " + error);
-      }
-
-      return output;
-    }
-
     #endregion
 
     #region " MD Processing "
@@ -1232,7 +1220,7 @@ namespace Versioning {
     private IVersionContainer InitializeVersionContainerByFileType(string fileFullName) {
 
       if (fileFullName.Contains("*")) {
-        var matches = this.ListFiles(fileFullName);
+        string[] matches = this.ListFiles(fileFullName);
         if (matches.Length == 0) {
           throw new FileNotFoundException($"There is no file matching the pattern '{fileFullName}'");
         }
@@ -1288,123 +1276,65 @@ namespace Versioning {
     /// </param>
     /// <param name="packageId"></param>
     /// <param name="newPackageVersion"></param>
-    public void UpdateNugetPackages(string solutionFiles, string packageId, string newPackageVersion) {
+    public void UpdatePackageReference(string solutionFiles, string packageId, string newPackageVersion) {
 
-      string[] slnFileFullNames = this.ListFiles(solutionFiles);
+      const bool addIfNotExisting = true;
 
-      foreach( string slnFileFullName in slnFileFullNames) {
-        Console.WriteLine($"Processing SOLUTION '{slnFileFullName}'...");
-        string packagesFolder =  SlnFileHelper.GetPackagesFolderFullPath(slnFileFullName);
-        string slnFolder = Path.GetDirectoryName(slnFileFullName);
-        string nugetConfig = Path.Combine(slnFolder, "nuget.config");
+      string[] fileFullNames = this.ListFiles(solutionFiles);
+      DependencyInfo newDependency = new DependencyInfo(packageId, newPackageVersion);
 
-        Console.WriteLine("   Packages: " + packagesFolder);
+      foreach ( string fileFullName in fileFullNames) {
 
-        string[] projFileFullNames = SlnFileHelper.GetProjectFileFullNames(slnFileFullName);
-
-        foreach (string projFileFullName in projFileFullNames) {
-
-          Console.Write($"   Processing PROJECT '{Path.GetFileName(projFileFullName)}'...  ");
-          if (File.Exists(projFileFullName)) {
-            var projFile = new VsProjFileAccessor(projFileFullName);
-
-            if (projFile.IsDotNetCoreFormat()) {
-              Console.WriteLine($"     (.NET CORE)");
-
-
-
-
-              //TODO: dann noch die feeds hinbekommen!!!!
-              continue;
-
-
-              //really true - they missed to implement an 'update'-command - so we need to do a pre-check
-              //before we can use the 'add'-command!
-              string[] installedPackageNames = this.ListInstalledPackages(projFileFullName);
-              if (!installedPackageNames.Contains(packageId)) {
-                continue;
+        if (fileFullName.EndsWith(".sln")) {
+          Console.WriteLine($"Processing SOLUTION '{fileFullName}'...");
+          string[] projFileFullNames = SlnFileHelper.GetProjectFileFullNames(fileFullName);
+          foreach (string projFileFullName in projFileFullNames) {
+            Console.Write($"   Processing '{Path.GetFileName(projFileFullName)}'...  ");
+            if (File.Exists(projFileFullName)) {
+              VsProjFileAccessor projFile = new VsProjFileAccessor(projFileFullName);
+              if (projFile.IsDotNetCoreFormat()) {
+                Console.WriteLine($"     (.NET CORE)");
+              }
+              else {
+                Console.WriteLine($"     (.NET Framework)");
               }
 
-              if (string.IsNullOrWhiteSpace(newPackageVersion)) {
-                Console.WriteLine(RunCommandline("C:\\Program Files\\dotnet\\dotnet.exe",
-                  $"add \"{projFileFullName}\" package {packageId} ", slnFolder)//--package-directory \"{packagesFolder}\" ")
-                );
-
-               
-              }
-              else { 
-                Console.WriteLine(RunCommandline("C:\\Program Files\\dotnet\\dotnet.exe",
-                  $"add \"{projFileFullName}\" package {packageId} --version {newPackageVersion} ", slnFolder)//--package-directory \"{packagesFolder}\" ")
-                );
-
-
-
-
-                //--configfile \"{nugetConfig}\"
-              }
+              projFile.WritePackageDependencies(
+                new DependencyInfo[] { newDependency },
+                addNew: addIfNotExisting, updateExisiting: true,
+                deleteOthers: false, onlyForTargetFramework: null
+              );
 
             }
             else {
-              Console.WriteLine($"     (.NET Framework)");
-
-              //string packagesConfigFullName = Path.Combine(Path.GetDirectoryName(projFileFullName), "packages.config");
-
-              try {
-                if (string.IsNullOrWhiteSpace(newPackageVersion)) {
-                  Console.WriteLine(RunCommandline("C:\\GIT\\BCGer\\Build\\nuget_6.7.0.exe",
-                    $"update \"{projFileFullName}\" -id {packageId} -RepositoryPath \"{packagesFolder}\"  -Verbosity detailed", slnFolder)//-ConfigFile \"{nugetConfig}\"
-                  );
-                }
-                else {
-                  Console.WriteLine(RunCommandline("C:\\GIT\\BCGer\\Build\\nuget_6.7.0.exe",
-                    $"update \"{projFileFullName}\" -id {packageId} -Version {newPackageVersion} -RepositoryPath \"{packagesFolder}\" -Verbosity detailed", slnFolder)
-                  );
-                }
-              }
-              catch (Exception ex) {
-                Console.WriteLine($"ERROR: {ex.Message}");
-                continue;
-              }
-
+              Console.WriteLine($"     (NOT EXISITING !!!)");
             }
           }
-          else {
-            Console.WriteLine($"     (NOT EXISITING !!!)");
+        }
+        else {
+          IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
+          Console.Write($"   Processing '{Path.GetFileName(fileFullName)}'...  ");
+          if(tgt is VsProjFileAccessor) {
+            if ((tgt as VsProjFileAccessor).IsDotNetCoreFormat()) {
+              Console.Write($"     (.NET CORE)");
+            }
+            else {
+              Console.Write($"     (.NET Framework)");
+            }
           }
+          Console.WriteLine();
+
+          tgt.WritePackageDependencies(
+            new DependencyInfo[] { newDependency }, 
+            addNew: addIfNotExisting, updateExisiting: true,
+            deleteOthers: false, onlyForTargetFramework: null
+          );
 
         }
 
       }
 
     }
-
-    private string[] ListInstalledPackages(string netCoreProjectName) {
-
-      string rawOutput = RunCommandline(
-        "C:\\Program Files\\dotnet\\dotnet.exe",
-         $"dotnet list \"{netCoreProjectName}\" package"
-      );
-      var packageNames = new List<string>();
-
-      using(var reader = new StringReader(rawOutput)) {
-        string line = reader.ReadLine();
-        while (!string.IsNullOrWhiteSpace(line)) {
-          line = line.Trim();
-          if (line.StartsWith(">")) {
-            line = line.Substring(1).TrimStart();
-            line = line.Substring(0, line.IndexOf(" "));
-            packageNames.Add(line);
-          }
-          line = reader.ReadLine();
-        }
-      }
-
-      return packageNames.ToArray();
-    }
-
-   // Rune uget 
-     
-   // run .netcore
 
     #endregion
 

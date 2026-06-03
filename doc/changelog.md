@@ -6,7 +6,9 @@
 
 ## Upcoming Changes
 
-*(none)*
+* **breaking Change**: Full refactoring of dependency-writing
+* **new Feature**: Function 'UpdatePackageReference' for Projects and Solutions
+* **new Feature**: separately address framework-specific groups in .nuspec files
 
 
 

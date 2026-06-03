@@ -11,6 +11,32 @@ namespace FileIO {
 
   internal static class FileIoHelper {
 
+    /// <summary>
+    /// Detects the current file encoding by inspecting the byte order mark.
+    /// Falls back to Encoding.Default to preserve legacy Visual Studio file behavior.
+    /// </summary>
+    public static Encoding DetectFileEncoding(string fileFullName) {
+      byte[] bytes = File.ReadAllBytes(fileFullName);
+
+      if (bytes.Length >= 3) {
+        if (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
+          return new UTF8Encoding(true);
+        }
+      }
+
+      if (bytes.Length >= 2) {
+        if (bytes[0] == 0xFF && bytes[1] == 0xFE) {
+          return Encoding.Unicode;
+        }
+
+        if (bytes[0] == 0xFE && bytes[1] == 0xFF) {
+          return Encoding.BigEndianUnicode;
+        }
+      }
+
+      return Encoding.Default;
+    }
+
     public static string Replace(string input, string regexSearch, string replacement, ref int matchCount) {
       var col = Console.ForegroundColor;
       Console.WriteLine($"  Searching for '" + regexSearch + "' ...");

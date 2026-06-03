@@ -49,6 +49,23 @@ namespace FileIO {
       return projectFiles.ToArray();
     }
 
+    public static VsProjFileAccessor[] GetProjectAccessors(string solutionFileFullName) {
+
+      var accessors = new List<VsProjFileAccessor>();
+
+      string[] projFileFullNames = GetProjectFileFullNames(solutionFileFullName);
+
+      foreach (string projFileFullName in projFileFullNames) {
+
+        if (File.Exists(projFileFullName)) {
+          accessors.Add(new VsProjFileAccessor(projFileFullName));
+        }
+     
+      }
+
+      return accessors.ToArray();
+    }
+
   }
 
 }

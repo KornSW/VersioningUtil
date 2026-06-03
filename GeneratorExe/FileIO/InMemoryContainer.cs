@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using Utils;
 using Versioning;
 
 namespace FileIO {
@@ -7,7 +10,7 @@ namespace FileIO {
   public class InMemoryContainer : IVersionContainer {
 
     private VersionInfo _CurrentVersion = new VersionInfo();
-    private Dictionary<string,string> _CurrentDependencies = new Dictionary<string, string>();
+    private DependencyInfo[] _CurrentDependencies = Array.Empty<DependencyInfo>();
 
     public InMemoryContainer() {
     }
@@ -20,39 +23,24 @@ namespace FileIO {
       _CurrentVersion = versionInfo;
     }
 
-    public void WritePackageDependencies(DependencyInfo[] packageDependencies, bool addNew, bool updateExisiting, bool deleteOthers) {
-      List<string> othersToDelete;
-      if (deleteOthers) {
-        othersToDelete = _CurrentDependencies.Keys.ToList();
-      }
-      else {
-        othersToDelete = new List<string>();
-      }
-      foreach (DependencyInfo dependencyToWrite in packageDependencies) {
-        if (othersToDelete.Contains(dependencyToWrite.TargetPackageId)) {
-          othersToDelete.Remove(dependencyToWrite.TargetPackageId);
-        }
-        if (_CurrentDependencies.ContainsKey(dependencyToWrite.TargetPackageId)) {
-          if (updateExisiting) {
-            _CurrentDependencies[dependencyToWrite.TargetPackageId] = dependencyToWrite.TargetPackageId;
-          }
-        }
-        else {
-          if (addNew) {
-            _CurrentDependencies.Add(dependencyToWrite.TargetPackageId,dependencyToWrite.TargetPackageId);
-          }
-        }
-      }
-      foreach (string packageId in othersToDelete) {
-        _CurrentDependencies.Remove(packageId);
-      }
+    public void WritePackageDependencies(
+      DependencyInfo[] packageDependencies,
+      bool addNew, bool updateExisiting, bool deleteOthers,
+      string onlyForTargetFramework
+    ) {
+
+      DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
+         ()=> _CurrentDependencies, (deps) => _CurrentDependencies = deps.ToArray()
+      );
+
+      updateHelper.WritePackageDependencies(
+        packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+      );
+
     }
 
-    public DependencyInfo[] ReadPackageDependencies() {
-      return _CurrentDependencies.Select((kvp) => new DependencyInfo {
-        TargetPackageId = kvp.Key,
-        TargetPackageVersionConstraint = new VersionContraint(kvp.Value)
-      }).ToArray();
+    public DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo) {
+      return _CurrentDependencies.ToArray();
     }
 
   }

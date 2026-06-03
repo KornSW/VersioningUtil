@@ -14,10 +14,11 @@ namespace FileIO {
 
     void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
-      bool addNew, bool updateExisiting, bool deleteOthers
+      bool addNew, bool updateExisiting, bool deleteOthers,
+      string onlyForTargetFramework
     );
 
-    DependencyInfo[] ReadPackageDependencies();
+    DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo);
 
   }
 

@@ -59,10 +59,15 @@ namespace FileIO {
       }
     }
 
-    public void WritePackageDependencies(DependencyInfo[] readPackageDependencies, bool addNew, bool updateExisiting, bool deleteOthers) {
+    public void WritePackageDependencies(
+       DependencyInfo[] packageDependencies,
+       bool addNew, bool updateExisiting, bool deleteOthers,
+       string onlyForTargetFramework
+     ) {
+
     }
 
-    public DependencyInfo[] ReadPackageDependencies() {
+    public DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo) {
       return new DependencyInfo[] { };
     }
 
