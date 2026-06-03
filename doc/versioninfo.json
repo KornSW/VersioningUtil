@@ -1,13 +1,13 @@
 {
-  "currentVersion": "2.4.4",
-  "currentVersionWithSuffix": "2.4.4",
+  "currentVersion": "2.4.5",
+  "currentVersionWithSuffix": "2.4.5",
   "releaseType": "",
-  "previousVersion": "2.4.3",
+  "previousVersion": "2.4.4",
   "changeGrade": "fix",
   "currentMajor": 2,
   "currentMinor": 4,
-  "currentPatch": 4,
+  "currentPatch": 5,
   "versionDateInfo": "2026-06-01",
-  "versionTimeInfo": "06:06:49",
-  "versionNotes": "- Fix: Constraint-calculator in mode 'SEM-SAFE' are aware of special case for 0.x.x (non-mvp-) versions to set upper bound to 2.0.0 instead of 1.0.0\n"
+  "versionTimeInfo": "06:19:57",
+  "versionNotes": "- Merge branch 'master' of https://github.com/KornSW/VersioningUtil\\n- fix unused variable\\n"
 }
