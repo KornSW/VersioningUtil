@@ -27,7 +27,7 @@ namespace FileIO {
       AssemblyName aName = AssemblyName.GetAssemblyName(_FileFullName);
 
       versionInfo.currentVersion = aName.Version.ToString(3);
-      versionInfo.preReleaseSuffix = ""; //TODO: unknwon...
+      versionInfo.releaseType = ""; //TODO: unknwon...
 
       versionInfo.CurrentVersion2VersionPartFields();
       versionInfo.CurrentVersionAndPrereleaseSuffix2CurrentVersionWithSuffix();

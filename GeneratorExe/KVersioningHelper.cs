@@ -158,12 +158,21 @@ namespace Versioning {
         preReleaseSemantic = "";
       }
 
-      VersionInfo info = KVersioningHelper.ProcessMarkdownAndCreateNewVersion(allLines, preReleaseSemantic, (string lastVersion) => {
-        //onNoChangesFound
-        List<string> gitHistoryLines = new List<string>();
-        this.GetGitHistorySinceTag((d,msg)=> gitHistoryLines.Add(msg), lastVersion, default);
-        return gitHistoryLines.ToArray();
-      });
+      VersionInfo info = KVersioningHelper.ProcessMarkdownAndCreateNewVersion(
+        allLines,
+        preReleaseSemantic,
+        (string lastVersionStringFromMdHeadline) => { //onNoChangesFound:
+          //...fallback to git-history
+          List<string> gitHistoryLines = new List<string>();
+          Console.WriteLine("Found no new entries within Changelog - doing fallback via git-history [BETA]...");
+          this.GetGitHistorySinceTag((d,msg)=> gitHistoryLines.Add(msg), lastVersionStringFromMdHeadline, default);
+          string[] changesFromGit = gitHistoryLines.ToArray();
+          foreach (string change in changesFromGit) {
+            Console.WriteLine(" detected git commit: " + change);
+          }
+          return changesFromGit;
+        }     
+      );
 
       Console.WriteLine(info.currentVersionWithSuffix);
       Console.WriteLine("---");
@@ -171,6 +180,9 @@ namespace Versioning {
       Console.WriteLine("---");
 
       File.WriteAllLines(changeLogFile, allLines.ToArray(), Encoding.Default);
+
+      //sicher ist sicher...
+      info.versionNotes = info.versionNotes.Replace("\"","'").Replace("\\", "/");
 
       if (string.IsNullOrWhiteSpace(targetFile)) {
         return;
@@ -187,31 +199,31 @@ namespace Versioning {
       targetFile = Path.GetFullPath(targetFile);
       string nam = Path.GetFileName(targetFile).ToLower();
       string ext = Path.GetExtension(targetFile).ToLower();
-      if (
-        ext == ".nuspec" || ext == ".vbproj" || ext == ".csproj" || nam == "package.json" || nam == "assemblyinfo.vb" || nam == "assemblyinfo.cs"
-      ) {
+      //if (
+      //  ext == ".nuspec" || ext == ".vbproj" || ext == ".csproj" || nam == "package.json" || nam == "assemblyinfo.vb" || nam == "assemblyinfo.cs"
+      //) {
         this.SetVersion(info.currentVersionWithSuffix, targetFile);
-      }
-      else {
-        using (FileStream fs = new FileStream(targetFile, FileMode.Create, FileAccess.Write)) {
-          using (StreamWriter sw = new StreamWriter(fs, Encoding.Default)) {
-            sw.WriteLine("{");
-            sw.WriteLine($"  \"currentVersion\": \"{info.currentVersion}\",");
-            sw.WriteLine($"  \"currentVersionWithSuffix\": \"{info.currentVersionWithSuffix}\",");
-            sw.WriteLine($"  \"releaseType\": \"{info.preReleaseSuffix}\",");
-            sw.WriteLine($"  \"previousVersion\": \"{info.previousVersion}\",");
-            sw.WriteLine($"  \"changeGrade\": \"{info.changeGrade}\",");
-            sw.WriteLine($"  \"currentMajor\": {info.currentMajor},");
-            sw.WriteLine($"  \"currentMinor\": {info.currentMinor},");
-            sw.WriteLine($"  \"currentPatch\": {info.currentFix},");
-            sw.WriteLine($"  \"versionDateInfo\": \"{info.versionDateInfo}\",");
-            sw.WriteLine($"  \"versionTimeInfo\": \"{info.versionTimeInfo}\",");
-            sw.WriteLine($"  \"versionNotes\": \"{info.versionNotes.Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Replace("\\", "\\\\")}\"");
-            sw.WriteLine("}");
-            sw.Flush();
-          }
-        }
-      }
+      //}
+      //else {
+      //  using (FileStream fs = new FileStream(targetFile, FileMode.Create, FileAccess.Write)) {
+      //    using (StreamWriter sw = new StreamWriter(fs, Encoding.Default)) {
+      //      sw.WriteLine("{");
+      //      sw.WriteLine($"  \"currentVersion\": \"{info.currentVersion}\",");
+      //      sw.WriteLine($"  \"currentVersionWithSuffix\": \"{info.currentVersionWithSuffix}\",");
+      //      sw.WriteLine($"  \"releaseType\": \"{info.releaseType}\",");
+      //      sw.WriteLine($"  \"previousVersion\": \"{info.previousVersion}\",");
+      //      sw.WriteLine($"  \"changeGrade\": \"{info.changeGrade}\",");
+      //      sw.WriteLine($"  \"currentMajor\": {info.currentMajor},");
+      //      sw.WriteLine($"  \"currentMinor\": {info.currentMinor},");
+      //      sw.WriteLine($"  \"currentPatch\": {info.currentFix},");
+      //      sw.WriteLine($"  \"versionDateInfo\": \"{info.versionDateInfo}\",");
+      //      sw.WriteLine($"  \"versionTimeInfo\": \"{info.versionTimeInfo}\",");
+      //      sw.WriteLine($"  \"versionNotes\": \"{info.versionNotes.Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Replace("\\", "\\\\")}\"");
+      //      sw.WriteLine("}");
+      //      sw.Flush();
+      //    }
+      //  }
+      //}
     }
 
     /// <summary>
@@ -310,7 +322,7 @@ namespace Versioning {
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           VersionInfo vers = tgt.ReadVersion();
-          vers.preReleaseSuffix = prereleaseSuffix;
+          vers.releaseType = prereleaseSuffix;
           vers.VersionPartFields2CurrentVersion(true);
           tgt.WriteVersion(vers);
         }
@@ -632,6 +644,50 @@ namespace Versioning {
     }
 
     /// <summary>
+    /// Just reads the version information out of a given file and prints it to the console
+    /// </summary>
+    /// <param name="metaDataSourceFile"></param>
+    public void InjectIntoAzureDevOpsBuildNumber(string metaDataSourceFile = "versioninfo.json") {
+      try {
+        IVersionContainer tgt = InitializeVersionContainerByFileType(metaDataSourceFile);
+        VersionInfo vers = tgt.ReadVersion();
+
+        Console.WriteLine($"##vso[build.updatebuildnumber]{vers.currentVersionWithSuffix}");
+
+      }
+      catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+      }
+    }
+
+    /// <summary>
+    /// Just reads the version information out of a given file and prints it to the console
+    /// </summary>
+    /// <param name="metaDataSourceFile"></param>
+    public void InjectIntoAzureDevOpsVariables(string metaDataSourceFile = "versioninfo.json") {
+      try {
+        IVersionContainer tgt = InitializeVersionContainerByFileType(metaDataSourceFile);
+        VersionInfo vers = tgt.ReadVersion();
+
+        Console.WriteLine($"##vso[task.setvariable variable=PreviousVersion]{vers.previousVersion}");
+        Console.WriteLine($"##vso[task.setvariable variable=ChangeGrade]{vers.changeGrade}");
+        Console.WriteLine($"##vso[task.setvariable variable=CurrentVersion]{vers.currentVersion}");
+        Console.WriteLine($"##vso[task.setvariable variable=PreReleaseSuffix]{vers.releaseType}");
+        Console.WriteLine($"##vso[task.setvariable variable=ReleaseType]{vers.releaseType}");
+        Console.WriteLine($"##vso[task.setvariable variable=CurrentVersionWithSuffix]{vers.currentVersionWithSuffix}");
+        Console.WriteLine($"##vso[task.setvariable variable=CurrentMajor]{vers.currentMajor}");
+        Console.WriteLine($"##vso[task.setvariable variable=CurrentMinor]{vers.currentMinor}");
+        Console.WriteLine($"##vso[task.setvariable variable=CurrentFix]{vers.currentFix}");
+        Console.WriteLine($"##vso[task.setvariable variable=VersionDateInfo]{vers.versionDateInfo}");
+        Console.WriteLine($"##vso[task.setvariable variable=VersionTimeInfo]{vers.versionTimeInfo}");
+        Console.WriteLine($"##vso[task.setvariable variable=VersionNotes]{vers.versionNotes}");
+      }
+      catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+      }
+    }
+
+    /// <summary>
     /// You can use this method to test you minimatch patterns...
     /// </summary>
     /// <param name="minimatchPatterns"></param>
@@ -646,6 +702,10 @@ namespace Versioning {
         minimatchPatterns = Path.GetFullPath(minimatchPatterns);
         if (File.Exists(minimatchPatterns)) {
           Console.WriteLine($"Checking existence of '{minimatchPatterns}' ... OK");
+          return new string[] { minimatchPatterns };
+        }
+        else if(Path.GetFileName(minimatchPatterns).Equals("versioninfo.json", StringComparison.CurrentCultureIgnoreCase)) {
+          //special case: a versioninfo.json can be written from scratch, if not exisiting!
           return new string[] { minimatchPatterns };
         }
         else {
@@ -957,9 +1017,9 @@ namespace Versioning {
       versionInfo.versionDateInfo = DateTime.Now.ToString("yyyy-MM-dd");
       versionInfo.versionTimeInfo = DateTime.Now.ToString("HH:mm:ss");
 
-      versionInfo.preReleaseSuffix = "";
+      versionInfo.releaseType = "";
       if (!string.IsNullOrWhiteSpace(preReleaseSemantic)) {
-        versionInfo.preReleaseSuffix = preReleaseSemantic.Trim().ToLower();
+        versionInfo.releaseType = preReleaseSemantic.Trim().ToLower();
       }
 
       int startIndex = FindIndex(allLines, startMarker);
@@ -1173,7 +1233,7 @@ namespace Versioning {
           versionInfo.currentMinor == lastVersionOrPre.Minor &&
           versionInfo.currentFix <= lastVersionOrPre.Build
         ) {
-          if (versionInfo.preReleaseSuffix == "official") {
+          if (versionInfo.releaseType == "official") {
             //nur hochzziehen wenn nötig
             versionInfo.currentFix = lastVersionOrPre.Build;
           }
@@ -1193,7 +1253,7 @@ namespace Versioning {
       //neuen version setzen
       allLines.Insert(upcommingChangesIndex + 1, $"released **{versionInfo.versionDateInfo}**, including:");
 
-      if (versionInfo.preReleaseSuffix == "") {
+      if (versionInfo.releaseType == "") {
 
         //upcomming wird zu release
         allLines[upcommingChangesIndex] = releasedVersionMarker.TrimEnd() + $" {currentVersion.ToString(3)}";
@@ -1210,8 +1270,8 @@ namespace Versioning {
       }
       else {
         //upcomming wird einfach aktualisiert
-        allLines[upcommingChangesIndex] = upcommingChangesMarker.TrimEnd() + $" ({currentVersion.ToString(3)}-{versionInfo.preReleaseSuffix})";
-        versionInfo.currentVersionWithSuffix = versionInfo.currentVersion + "-" + versionInfo.preReleaseSuffix;
+        allLines[upcommingChangesIndex] = upcommingChangesMarker.TrimEnd() + $" ({currentVersion.ToString(3)}-{versionInfo.releaseType})";
+        versionInfo.currentVersionWithSuffix = versionInfo.currentVersion + "-" + versionInfo.releaseType;
       }
 
       return versionInfo;

@@ -12,20 +12,20 @@ namespace Versioning {
     public void CurrentVersionAndPrereleaseSuffix2CurrentVersionWithSuffix() {
       ParseVersion(this.currentVersion, out int maj, out int min, out int fix, out string preReleaseSuffix);
       this.currentVersionWithSuffix = $"{maj}.{min}.{fix}";
-      if (!String.IsNullOrWhiteSpace(this.preReleaseSuffix)) {
-        this.currentVersionWithSuffix = this.currentVersionWithSuffix + "-" + this.preReleaseSuffix;
+      if (!String.IsNullOrWhiteSpace(this.releaseType)) {
+        this.currentVersionWithSuffix = this.currentVersionWithSuffix + "-" + this.releaseType;
       }
     }
     public void CurrentVersionWithSuffix2CurrentVersionAndPrereleaseSuffx(bool alsoUpdateVersionPartFields = true) {
       ParseVersion(this.currentVersionWithSuffix, out int maj, out int min, out int fix, out string preReleaseSuffix);
       this.currentVersion = $"{maj}.{min}.{fix}";
-      this.preReleaseSuffix = preReleaseSuffix;
+      this.releaseType = preReleaseSuffix;
       if (alsoUpdateVersionPartFields) {
         this.CurrentVersion2VersionPartFields();
       }
     }
 
-    public String preReleaseSuffix { get; set; } = "";
+    public String releaseType { get; set; } = "";
     public String currentVersion { get; set; } = "0.0.0";
 
     public void VersionPartFields2CurrentVersion(bool alsoUpdateCurrentVersionWithSuffix = true) {
