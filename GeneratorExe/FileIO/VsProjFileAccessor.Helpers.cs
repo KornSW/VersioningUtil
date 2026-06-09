@@ -160,7 +160,7 @@ namespace FileIO {
       string packagesFullDirectoryName = this.GetPackagesFullDirectoryName();
       string projectDirectoryName = Path.GetDirectoryName(_FileFullName);
 
-      return rootElement
+      var result = rootElement
         .Descendants(referenceName)
         .Select((referenceElement) => {
           XElement hintPathElement = referenceElement.Element(hintPathName);
@@ -192,6 +192,8 @@ namespace FileIO {
           return dependencyInfo != null;
         })
         .ToArray();
+
+      return result;
     }
 
     /// <summary>

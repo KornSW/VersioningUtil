@@ -18,11 +18,23 @@ namespace FileIO {
 
     private string _FileFullName;
 
+    /// <summary>
+    /// nur die dependencies IN der projekt-datei (d.h. bei .net-fx projekte die assembly-referenzen, die in verbindung mit nuget-packeten stehen) - nicht die packages.config-datei, die bei .net-fx projekte führend ist!
+    /// </summary>
+    internal DependencyUpdateHelper _LocalUpdateHelper;
+
     public VsProjFileAccessor(string fileFullName) {
+
       _FileFullName = Path.GetFullPath(fileFullName);
+
       if (!File.Exists(fileFullName)) {
         throw new FileNotFoundException("Could not find File: " + fileFullName);
       }
+
+      _LocalUpdateHelper = new DependencyUpdateHelper(
+        () => ReadPackageDependenciesLocal(false), (deps) => OverwriteAllLocalPackageDependencies(deps.ToArray())
+      );
+
     }
 
     public bool IsCSharp() {
@@ -152,11 +164,12 @@ namespace FileIO {
         //für .net-fx (wo es das projekt mit seinen assembly-refs + die packages.config gibt,
         //sehen wir letztere als führend!
         if (_PackagesConfig == null) { 
-          _PackagesConfig = new PackagesConfigFileAccessor(pkgCfgFileName, this.GetDotNetVersion(), OnPackageConfigChanged);
+          _PackagesConfig = new PackagesConfigFileAccessor(pkgCfgFileName, this);
         }
         return _PackagesConfig;
       }
     }
+
 
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
@@ -173,11 +186,7 @@ namespace FileIO {
         return;
       }
 
-      DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
-         ()=>ReadPackageDependencies(true), (deps) => OverwriteAllLocalPackageDependencies(deps.ToArray())
-      );
-
-      updateHelper.WritePackageDependencies(
+      _LocalUpdateHelper.WritePackageDependencies(
         packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
       );
 
@@ -302,10 +311,12 @@ namespace FileIO {
    // private string _RegexSearch = "<PackageReference Include=\"[a-zA-Z0-9.\\-\\*]*\" Version=\"[a-zA-Z0-9.\\-\\*]*\"";
 
     public DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo) {
+
       IVersionContainer target = this.GetContainerOfDependencies(true);
       if (target != this) {//für .net-fx wird hier auf die packages.config umgeleitet...
         return target.ReadPackageDependencies(includeFrameworkInfo);
       }
+
       return ReadPackageDependenciesLocal(includeFrameworkInfo);
     }
 
@@ -325,64 +336,9 @@ namespace FileIO {
         return this.ReadDotNetFrameworkNugetReferences(rootElement, includeFrameworkInfo);
       }
 
-
-
-
-
-      // HIER ÄNDERN //
-
-      //wichtig: über alle ItemGroups suchen!
-
-      if (this.IsDotNetCoreFormat()) {
-        //hier in .net core ists einfach, da extra kontoten-typ:
-        //<PackageReference Include="SmartStandards.Logging" Version="3.3.1" />
-
-
-
-
-      }
-      else {
-        //hier gehts NUR um die untermenge der assembly-referenzen, die in verbindung mit nuget-packeten stehen!!!!
-
-       /*
-        <Reference Include="SmartStandards.Logging, Version=3.3.1.0, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\..\vendor\nuget\SmartStandards.Logging.3.3.1\lib\net48\SmartStandards.Logging.dll</HintPath>
-        </Reference>
-       */
-
-
-        string packagesFullDirectoryName = this.GetPackagesFullDirectoryName();
-
-        //TODO: nur die, wo  hintPath.StartsWith(packagesFullDirectoryName) 
-
-      }
-
-      /////////////////
-
     }
 
-
-    #region HELPER 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #endregion
-
     #region HELPER 1 
-
-
-
 
     internal void OnPackageConfigChanged(IVersionContainer packageConfig) {
 

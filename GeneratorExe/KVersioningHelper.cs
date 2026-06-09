@@ -1338,7 +1338,8 @@ namespace Versioning {
     /// <param name="newPackageVersion"></param>
     public void UpdatePackageReference(string solutionFiles, string packageId, string newPackageVersion) {
 
-      const bool addIfNotExisting = true;
+      //nur für test-zwecke - normalerweise natürlich nicht bei einem update!!!
+      const bool addIfNotExisting = false;
 
       string[] fileFullNames = this.ListFiles(solutionFiles);
       DependencyInfo newDependency = new DependencyInfo(packageId, newPackageVersion);

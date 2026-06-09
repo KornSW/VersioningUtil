@@ -19,7 +19,7 @@ namespace FileIO {
     private Action<PackagesConfigFileAccessor> _OnChangedCallback;
     private Version _NetFxVersionOfParentProject;
 
-    private VsProjFileAccessor _SelfInitializedProjectFileAccessor = null;
+    private VsProjFileAccessor _ProjectFileAccessor = null;
 
     public PackagesConfigFileAccessor(
       string fileFullName
@@ -33,19 +33,31 @@ namespace FileIO {
       string projectFileFullName = Directory.GetFiles(Path.GetDirectoryName(fileFullName), "*.csproj|*.vbproj").FirstOrDefault();
 
       if(!string.IsNullOrWhiteSpace(projectFileFullName)) {
-        _SelfInitializedProjectFileAccessor = new VsProjFileAccessor(projectFileFullName);
-        _NetFxVersionOfParentProject = _SelfInitializedProjectFileAccessor.GetDotNetVersion();
-        _OnChangedCallback = _SelfInitializedProjectFileAccessor.OnPackageConfigChanged;
+        _ProjectFileAccessor = new VsProjFileAccessor(projectFileFullName);
+        _NetFxVersionOfParentProject = _ProjectFileAccessor.GetDotNetVersion();
+        //_OnChangedCallback = _ProjectFileAccessor.OnPackageConfigChanged;
       }
       else {
         _NetFxVersionOfParentProject = new Version(4,8,1);
-        _OnChangedCallback = (p) => { /*do nothing*/ };
+        //_OnChangedCallback = (p) => { /*do nothing*/ };
       }
 
     }
 
     public PackagesConfigFileAccessor(
-      string fileFullName, Version netFxVersionOfParentProject, Action<PackagesConfigFileAccessor> onChangedCallback = null
+      string fileFullName, VsProjFileAccessor parentProject
+    ) {
+      _FileFullName = Path.GetFullPath(fileFullName);
+      _ProjectFileAccessor = parentProject;
+      _NetFxVersionOfParentProject = _ProjectFileAccessor.GetDotNetVersion();
+      if (!File.Exists(fileFullName)) {
+        throw new FileNotFoundException("Could not find File: " + fileFullName);
+      }
+    }
+
+    public PackagesConfigFileAccessor(
+      string fileFullName, Version netFxVersionOfParentProject,
+      Action<PackagesConfigFileAccessor> onChangedCallback = null
     ) {
       _FileFullName = Path.GetFullPath(fileFullName);
       _OnChangedCallback = onChangedCallback;
@@ -77,6 +89,15 @@ namespace FileIO {
       updateHelper.WritePackageDependencies(
         packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
       );
+
+      if(_ProjectFileAccessor != null) {
+
+        //wir als führende einheit schieben zusätzlich zurück ins parent-projekt...
+        _ProjectFileAccessor._LocalUpdateHelper.WritePackageDependencies(
+          packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+        );
+
+      }
 
     }
 
