@@ -6,11 +6,17 @@
 
 ## Upcoming Changes
 
-* **breaking Change**: Full refactoring of dependency-writing
-* **new Feature**: Function 'UpdatePackageReference' for Projects and Solutions
-* **new Feature**: separately address framework-specific groups in .nuspec files
-* **new Feature**: git-history as fallback when missed to maintain changelog file
-* many small fixes
+*(none)*
+
+
+
+## v 3.0.0
+released **2026-06-09**, including:
+ - **breaking Change**: Full refactoring of dependency-writing
+ - **new Feature**: Function 'UpdatePackageReference' for Projects and Solutions
+ - **new Feature**: separately address framework-specific groups in .nuspec files
+ - **new Feature**: git-history as fallback when missed to maintain changelog file
+ - many small fixes
 
 
 
