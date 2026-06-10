@@ -6,8 +6,14 @@
 
 ## Upcoming Changes
 
-* **new Feature**: added ability to read .nuspec-metadata out of a .nupkg-package file
-* **new Feature**: added parameter do disallow version downgrades
+*(none)*
+
+
+
+## v 3.1.0
+released **2026-06-10**, including:
+ - **new Feature**: added ability to read .nuspec-metadata out of a .nupkg-package file
+ - **new Feature**: added parameter do disallow version downgrades
 
 
 

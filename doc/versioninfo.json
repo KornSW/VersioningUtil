@@ -1,13 +1,13 @@
 {
-  "currentVersion": "3.0.0",
-  "currentVersionWithSuffix": "3.0.0",
+  "currentVersionWithSuffix": "3.1.0",
   "releaseType": "",
-  "previousVersion": "2.4.4",
-  "changeGrade": "major",
+  "currentVersion": "3.1.0",
   "currentMajor": 3,
-  "currentMinor": 0,
-  "currentPatch": 0,
-  "versionDateInfo": "2026-06-09",
-  "versionTimeInfo": "14:03:35",
-  "versionNotes": "- breaking Change: Full refactoring of dependency-writing\\n- new Feature: Function 'UpdatePackageReference' for Projects and Solutions\\n- new Feature: separately address framework-specific groups in .nuspec files\\n- new Feature: git-history as fallback when missed to maintain changelog file\\n- many small fixes\\n"
+  "currentMinor": 1,
+  "currentFix": 0,
+  "previousVersion": "0.0.0",
+  "changeGrade": "initial",
+  "versionTimeInfo": "00:00:00",
+  "versionDateInfo": "1900-01-01",
+  "versionNotes": ""
 }
