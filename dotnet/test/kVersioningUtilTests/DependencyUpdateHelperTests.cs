@@ -67,7 +67,7 @@ namespace Versioning {
       helper.WritePackageDependencies(
         IncommingPackages_GlobalOnly().ToArray(),
         addNew: true, updateExisiting: true, deleteOthers: true,
-        onlyForTargetFramework: null
+        allowDowngrade: false, onlyForTargetFramework: null
       );
 
       Assert.IsNotNull(result);
@@ -97,7 +97,7 @@ namespace Versioning {
       helper.WritePackageDependencies(
         IncommingPackages_GlobalOnly().ToArray(),
         addNew: true, updateExisiting: true, deleteOthers: true,
-        onlyForTargetFramework: "net8.0"
+        allowDowngrade: false, onlyForTargetFramework: "net8.0"
       );
 
       Assert.IsNotNull(result);

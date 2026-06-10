@@ -1,20 +1,12 @@
 ﻿using FileIO;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Design.Serialization;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using Utils;
-using Versioning;
 
 namespace Versioning {
 
@@ -479,6 +471,7 @@ namespace Versioning {
       string targetFilesToProcess,
       string metaDataSourceFile = "versioninfo.json",
       string contraintType = "SEM-SAFE",
+      bool allowDowngrade = true,
       string onlyForTargetFramework = null
     ) {
       IVersionContainer src = InitializeVersionContainerByFileType(metaDataSourceFile);
@@ -487,7 +480,7 @@ namespace Versioning {
         return;
       }
       VersionInfo vers = src.ReadVersion();
-      this.SetVersionToDependencyEntry(refPackageId, vers.currentVersionWithSuffix, targetFilesToProcess, contraintType, onlyForTargetFramework);
+      this.SetVersionToDependencyEntry(refPackageId, vers.currentVersionWithSuffix, targetFilesToProcess, contraintType, allowDowngrade, onlyForTargetFramework);
     }
 
     /// <summary>
@@ -516,6 +509,7 @@ namespace Versioning {
       string newDependentVersion,
       string targetFilesToProcess,
       string contraintType = "SEM-SAFE",
+      bool allowDowngrade = true,
       string onlyForTargetFramework = null
     ) {
       DependencyInfo dep = new DependencyInfo(dependencyPackageId, newDependentVersion);
@@ -531,13 +525,13 @@ namespace Versioning {
         dep.TargetPackageVersionConstraint.SetVersionShouldBeInNonBreakingRange(newDependentVersion);
       }
       this.SetVersionToDependencyEntryInternal(
-        targetFilesToProcess, false, true, false, onlyForTargetFramework, dep
+        targetFilesToProcess, false, true, false, onlyForTargetFramework, allowDowngrade, dep
       );
     }
 
     private void SetVersionToDependencyEntryInternal(
       string targetFilesToProcess, bool addNew, bool updateExisiting, bool deleteOthers,
-      string onlyForTargetFramework, params DependencyInfo[] newDependencies
+      string onlyForTargetFramework,bool allowDowngrade, params DependencyInfo[] newDependencies
     ) {
       string[] allFileFullNames = this.ListFiles(targetFilesToProcess);
       foreach (string fileFullName in allFileFullNames) {
@@ -545,7 +539,7 @@ namespace Versioning {
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           tgt.WritePackageDependencies(
-            newDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+            newDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
           );
         }
         catch (Exception ex) {
@@ -559,16 +553,18 @@ namespace Versioning {
       string sourceFileToReadDependencies,
       string packageIdWhitelist="*",
       string packageIdBlacklist = "",
-      string contraintType = "KEEP",
+      string constraintType = "KEEP",
       bool addNew = true,
       bool updateExisiting = true,
       bool deleteOthers = false,
+      bool allowDowngrade = true,
       string onlyForTargetFramework = null
     ) {
       DependencyInfo[] srcDependencies;
       try {
         IVersionContainer tgt = InitializeVersionContainerByFileType(sourceFileToReadDependencies);
         srcDependencies = tgt.ReadPackageDependencies(true);
+
       }
       catch (Exception ex) {
         Console.WriteLine(ex.Message);
@@ -583,17 +579,17 @@ namespace Versioning {
         srcDependencies = srcDependencies.Where((d) => !split.Contains(d.TargetPackageId)).ToArray();
       }
 
-      if (contraintType == "EXACT") {  
+      if (constraintType == "EXACT") {  
         foreach (var dep in srcDependencies) {
           dep.TargetPackageVersionConstraint.SetVersionShouldBeExact(dep.TargetPackageVersionConstraint.ToString(true));
         }
       }
-      else if (contraintType == "MIN") {;
+      else if (constraintType == "MIN") {;
         foreach (var dep in srcDependencies) {
           dep.TargetPackageVersionConstraint.SetVersionShouldBeGreaterThanOrEqual(dep.TargetPackageVersionConstraint.ToString(true));
         }
       }
-      else if (contraintType == "KEEP") {
+      else if (constraintType == "KEEP") {
       }
       else { //SEM-SAFE
         foreach (var dep in srcDependencies) {
@@ -601,8 +597,14 @@ namespace Versioning {
         }
       }
 
+      Console.WriteLine("Will use the following set of dependencies to be ensured:");
+      foreach (DependencyInfo dep in srcDependencies) {
+        Console.WriteLine("   " + dep.ToString());
+      }
+      Console.WriteLine();
+
       this.SetVersionToDependencyEntryInternal(
-        targetFilesToUpdate, addNew, updateExisiting, deleteOthers, onlyForTargetFramework, srcDependencies
+        targetFilesToUpdate, addNew, updateExisiting, deleteOthers, onlyForTargetFramework, allowDowngrade, srcDependencies
       );
     }
 
@@ -691,8 +693,46 @@ namespace Versioning {
     /// You can use this method to test you minimatch patterns...
     /// </summary>
     /// <param name="minimatchPatterns"></param>
+    /// <param name="expandSolutionFiles"></param>
     /// <returns></returns>
-    public string[] ListFiles(string minimatchPatterns) {
+    public string[] ListFiles(string minimatchPatterns, bool expandSolutionFiles = true) {
+      string[] result = this.ListFilesInternal(minimatchPatterns);
+
+      if (!expandSolutionFiles) {
+        return result;
+      }
+
+      List<string> expanded = new List<string>();
+      foreach (string entry in result) {
+
+        if (!entry.EndsWith(".sln", StringComparison.InvariantCulture)) {
+          if (!expanded.Contains(entry)) {
+            expanded.Add(entry);
+          }
+        }
+        else {
+          Console.WriteLine($"Expanding Solution-File '{entry}'...");
+          string[] projFileFullNames = SlnFileHelper.GetProjectFileFullNames(entry);
+          foreach (string projFileFullName in projFileFullNames) {
+            Console.Write($"   found '{Path.GetFileName(projFileFullName)}'...  ");
+            if (File.Exists(projFileFullName)) {
+              Console.WriteLine($"     (exising)"); 
+              if (!expanded.Contains(projFileFullName)) {
+                expanded.Add(projFileFullName);
+              }
+            }
+            else {
+              Console.WriteLine($"     (NOT EXISITING !!!)");
+            }
+          }
+        }
+
+      }
+
+      return expanded.ToArray();
+    }
+
+    private string[] ListFilesInternal(string minimatchPatterns) {
 
       //IF CALLED WITH SINGLE FILE
       if (!minimatchPatterns.Contains("*") && !minimatchPatterns.Contains(";") && !minimatchPatterns.Contains("!")) {
@@ -1312,7 +1352,7 @@ namespace Versioning {
       else if (fName.EndsWith(".vb", StringComparison.InvariantCultureIgnoreCase) || fName.EndsWith(".cs", StringComparison.InvariantCultureIgnoreCase)) {
         return new AssemblyInfoFileAccessor(fileFullName);
       }
-      else if (fName.EndsWith(".nuspec", StringComparison.InvariantCultureIgnoreCase)) {
+      else if (fName.EndsWith(".nuspec", StringComparison.InvariantCultureIgnoreCase) || fName.EndsWith(".nupkg", StringComparison.InvariantCultureIgnoreCase)) {
         return new NuspecFileAccessor(fileFullName);
       }
       else if (fName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) || fName.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase)) {
@@ -1336,7 +1376,9 @@ namespace Versioning {
     /// </param>
     /// <param name="packageId"></param>
     /// <param name="newPackageVersion"></param>
-    public void UpdatePackageReference(string solutionFiles, string packageId, string newPackageVersion) {
+    public void UpdatePackageReference(
+      string solutionFiles, string packageId, string newPackageVersion, bool allowDowngrade = false
+    ) {
 
       //nur für test-zwecke - normalerweise natürlich nicht bei einem update!!!
       const bool addIfNotExisting = false;
@@ -1362,8 +1404,8 @@ namespace Versioning {
 
               projFile.WritePackageDependencies(
                 new DependencyInfo[] { newDependency },
-                addNew: addIfNotExisting, updateExisiting: true,
-                deleteOthers: false, onlyForTargetFramework: null
+                addNew: addIfNotExisting, updateExisiting: true, deleteOthers: false, 
+                allowDowngrade: allowDowngrade, onlyForTargetFramework: null
               );
 
             }
@@ -1387,8 +1429,8 @@ namespace Versioning {
 
           tgt.WritePackageDependencies(
             new DependencyInfo[] { newDependency }, 
-            addNew: addIfNotExisting, updateExisiting: true,
-            deleteOthers: false, onlyForTargetFramework: null
+            addNew: addIfNotExisting, updateExisiting: true, deleteOthers: false,
+            allowDowngrade: allowDowngrade, onlyForTargetFramework: null
           );
 
         }

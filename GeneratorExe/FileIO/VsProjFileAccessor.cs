@@ -174,20 +174,20 @@ namespace FileIO {
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
       bool addNew, bool updateExisiting, bool deleteOthers,
-      string onlyForTargetFramework
+      bool allowDowngrade, string onlyForTargetFramework
     ) {
 
       IVersionContainer target = this.GetContainerOfDependencies(true);
       if(target != this) {
         //für .net-fx wird hier auf die packages.config umgeleitet...
         target.WritePackageDependencies(
-          packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+          packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
         );
         return;
       }
 
       _LocalUpdateHelper.WritePackageDependencies(
-        packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+        packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
       );
 
     }
@@ -352,7 +352,7 @@ namespace FileIO {
       DependencyInfo[] realExsistingPackageEntries = packageConfig.ReadPackageDependencies(true);
 
       updateHelper.WritePackageDependencies(
-        realExsistingPackageEntries, true, true, true, null
+        realExsistingPackageEntries, true, true, true, true, null
       );
 
     }
@@ -512,7 +512,7 @@ namespace FileIO {
         return null;
       }
 
-      string value = rootElement.Descendants("add").Where((element) => {
+      string configuredRepositoryPath = rootElement.Descendants("add").Where((element) => {
         XAttribute keyAttribute = element.Attribute("key");
         return keyAttribute != null && keyAttribute.Value == "repositoryPath";
       }).Select((element) => {
@@ -523,8 +523,11 @@ namespace FileIO {
         return valueAttribute.Value;
       }).FirstOrDefault();
 
-      value = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(nugetConfigFullName), value));
-      return value;
+      if (!string.IsNullOrWhiteSpace(configuredRepositoryPath)) {
+        configuredRepositoryPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(nugetConfigFullName), configuredRepositoryPath));
+      }
+
+      return configuredRepositoryPath;
     }
 
 

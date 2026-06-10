@@ -1,30 +1,72 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Utils;
-using Versioning;
 using System.Xml;
 using System.Xml.Linq;
+using Utils;
+using Versioning;
 
 namespace FileIO {
 
   public class NuspecFileAccessor : IVersionContainer {
 
     private string _FileFullName;
+    private bool _PackageMode = false;
+    private Func<string> _NuspecFileReader;
 
     public NuspecFileAccessor(string fileFullName) {
       _FileFullName = Path.GetFullPath(fileFullName);
+
       if (!File.Exists(fileFullName)) {
         throw new FileNotFoundException("Could not find File: " + fileFullName);
       }
+
+      _PackageMode = Path.GetExtension(fileFullName).Equals(".nupkg", StringComparison.OrdinalIgnoreCase);
+      if (!_PackageMode) {
+        _NuspecFileReader = ()=> File.ReadAllText(_FileFullName, Encoding.Default);
+      }
+      else {
+        _NuspecFileReader = () => ReadNuspecFromNupkg(_FileFullName);
+
+      }
+
+    }
+
+    private static string ReadNuspecFromNupkg(string nupkgFullFileName) {
+
+      using (FileStream packageStream = File.OpenRead(nupkgFullFileName)) {
+
+        using (ZipArchive archive = new ZipArchive(packageStream, ZipArchiveMode.Read, true)) {
+
+          ZipArchiveEntry nuspecEntry = archive.Entries.Where(
+            (ZipArchiveEntry entry) => entry?.Name != null && entry.Name.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase)
+          ).First();
+
+          using (Stream nuspecStream = nuspecEntry.Open()) {
+
+            using (StreamReader reader = new StreamReader(nuspecStream, Encoding.UTF8, true)) {
+
+              return reader.ReadToEnd();
+
+            }
+
+          }
+
+        }
+
+      }
+
     }
 
     public VersionInfo ReadVersion() {
-      string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+      //string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
+      string rawContent = _NuspecFileReader();
+
       var versionInfo = new VersionInfo();
 
       var matchVers = Regex.Matches(rawContent, _RegexSearch).FirstOrDefault();
@@ -38,16 +80,14 @@ namespace FileIO {
       return versionInfo;
     }
 
-    /*
-     * <?xml version="1.0"?>
-       <package>
-         <metadata>
-           <version>2.0.6-FF-FF</version> 
-     */
-
     private string _RegexSearch = "<version>[a-zA-Z0-9.\\-\\*]*</version>";
 
     public void WriteVersion(VersionInfo versionInfo) {
+
+      if (_PackageMode) {
+        throw new InvalidOperationException("Direct dependency updates are not supported for already packed .nupkg-packages (this works for .nuspec-files only)");
+      }
+
       string rawContent = File.ReadAllText(_FileFullName, Encoding.Default);
       string versionToWrite = versionInfo.currentVersionWithSuffix;
 
@@ -69,22 +109,30 @@ namespace FileIO {
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
       bool addNew, bool updateExisiting, bool deleteOthers,
-      string onlyForTargetFramework
+      bool allowDowngrade, string onlyForTargetFramework
     ) {
+
+      if (_PackageMode) {
+        throw new InvalidOperationException("Direct dependency updates are not supported for already packed .nupkg-packages (this works for .nuspec-files only)");
+      }
 
       DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
          () => ReadPackageDependencies(true), (deps) => OverwriteAllPackageDependencies(deps.ToArray())
       );
 
       updateHelper.WritePackageDependencies(
-        packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+        packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
       );
 
     }
 
     public void OverwriteAllPackageDependencies(DependencyInfo[] newDependencies) {
 
-      XDocument document = XDocument.Load(this._FileFullName, LoadOptions.PreserveWhitespace);
+      if (_PackageMode) {
+        throw new InvalidOperationException("Direct dependency updates are not supported for already packed .nupkg-packages (this works for .nuspec-files only)");
+      }
+
+      XDocument document = XDocument.Load(_FileFullName, LoadOptions.PreserveWhitespace);
       XElement dependenciesElement = this.GetOrCreateDependenciesElement(document);
 
       bool fileChanged = this.OverwriteNuspecDependencies(dependenciesElement, newDependencies);
@@ -93,33 +141,20 @@ namespace FileIO {
         this.SaveXmlDocument(document);
       }
 
-      // HIER ÄNDERN //
-
-      //string rawContent = File.ReadAllText(_FileFullName, Encoding.UTF8);
-
-      //bool fileChanged = false;
-      //foreach (var packageDependency in newDependencies) {
-      //  int matchCount = 0;
-      //  rawContent = FileIoHelper.Replace(
-      //    rawContent,
-      //    $"<dependency id=\"{packageDependency.TargetPackageId}\" version=\"[a-zA-Z0-9.,)(\\[\\]\\-\\*]*\"",
-      //    $"<dependency id=\"{packageDependency.TargetPackageId}\" version=\"{packageDependency.TargetPackageVersionConstraint}\"", ref matchCount
-      //  );
-      //  if (matchCount > 0) {
-      //    Console.WriteLine($"  Processed ref version of {matchCount} matches for \"{packageDependency.TargetPackageId}\" to \"{packageDependency.TargetPackageVersionConstraint}\"");
-      //    fileChanged = true;
-      //  }
-      //}
-
-      //if (fileChanged) {
-      //  FileIoHelper.WriteFile(_FileFullName, rawContent);
-      //}
-
     }
 
     private string _RegexSearchDep = "<dependency id=\"[a-zA-Z0-9.\\-\\*]*\" version=\"[a-zA-Z0-9.,)(\\[\\]\\-\\*]*\"";
     public DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo) {
-      XDocument document = XDocument.Load(this._FileFullName, LoadOptions.PreserveWhitespace);
+
+      XDocument document;
+
+      string rawContent = _NuspecFileReader();
+
+      using (TextReader rdr = new StringReader(rawContent)) {
+        document = XDocument.Load(rdr, LoadOptions.PreserveWhitespace); 
+      }
+      //XDocument document = XDocument.Load(this._FileFullName, LoadOptions.PreserveWhitespace);
+
       XElement dependenciesElement = this.GetDependenciesElement(document);
 
       if (dependenciesElement == null) {
@@ -127,18 +162,6 @@ namespace FileIO {
       }
 
       return this.ReadNuspecDependencies(dependenciesElement, includeFrameworkInfo);
-
-
-
-      //string rawContent = File.ReadAllText(_FileFullName, Encoding.UTF8);
-
-
-      //// HIER ÄNDERN //
-
-      //return Regex.Matches(rawContent, _RegexSearchDep).Select((m) => {
-      //  string[] slt = m.Value.Split('"');
-      //  return new DependencyInfo(slt[1], slt[3]);
-      //}).ToArray();
     }
 
     /// <summary>

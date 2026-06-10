@@ -6,7 +6,8 @@
 
 ## Upcoming Changes
 
-*(none)*
+* **new Feature**: added ability to read .nuspec-metadata out of a .nupkg-package file
+* **new Feature**: added parameter do disallow version downgrades
 
 
 

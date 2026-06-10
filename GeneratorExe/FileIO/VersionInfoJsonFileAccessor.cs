@@ -36,7 +36,7 @@ namespace FileIO {
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
       bool addNew, bool updateExisiting, bool deleteOthers,
-      string onlyForTargetFramework
+      bool allowDowngrade, string onlyForTargetFramework
     ) {
 
     }

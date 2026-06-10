@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Intrinsics.Arm;
 using System.Text.RegularExpressions;
 using Versioning;
 
@@ -21,90 +23,86 @@ namespace Utils {
 
     public bool SkipSorting { get; set; } = false;
 
-    public void WritePackageDependencies2(
-      DependencyInfo[] packageDependencies,
-      bool addNew, bool updateExisiting, bool deleteOthers,
-      string onlyForTargetFramework
-    ) {
+    //public void WritePackageDependencies2(
+    //  DependencyInfo[] packageDependencies,
+    //  bool addNew, bool updateExisiting, bool deleteOthers,
+    //  bool allowDowngrade, string onlyForTargetFramework
+    //) {
 
-      Func<IEnumerable<DependencyInfo>> filteredDependencyGetter = _DependencyGetter;
-      Func<IEnumerable<DependencyInfo>> dependenciesToSkipGetter = ()=> Enumerable.Empty<DependencyInfo>();
+    //  Func<IEnumerable<DependencyInfo>> filteredDependencyGetter = _DependencyGetter;
+    //  Func<IEnumerable<DependencyInfo>> dependenciesToSkipGetter = ()=> Enumerable.Empty<DependencyInfo>();
 
-      if (!string.IsNullOrWhiteSpace(onlyForTargetFramework)) {
-        filteredDependencyGetter = ()=> _DependencyGetter().Where((d) => onlyForTargetFramework.Equals(d.DedicatedToTargetFramework));
-        dependenciesToSkipGetter = () => _DependencyGetter().Where((d) => !onlyForTargetFramework.Equals(d.DedicatedToTargetFramework));
+    //  if (!string.IsNullOrWhiteSpace(onlyForTargetFramework)) {
+    //    filteredDependencyGetter = ()=> _DependencyGetter().Where((d) => onlyForTargetFramework.Equals(d.DedicatedToTargetFramework));
+    //    dependenciesToSkipGetter = () => _DependencyGetter().Where((d) => !onlyForTargetFramework.Equals(d.DedicatedToTargetFramework));
 
-        packageDependencies = packageDependencies.Where(
-          (d) => onlyForTargetFramework.Equals(d.DedicatedToTargetFramework) || 
-          string.IsNullOrWhiteSpace(d.DedicatedToTargetFramework) 
-        ).ToArray();
+    //    packageDependencies = packageDependencies.Where(
+    //      (d) => onlyForTargetFramework.Equals(d.DedicatedToTargetFramework) || 
+    //      string.IsNullOrWhiteSpace(d.DedicatedToTargetFramework) 
+    //    ).ToArray();
 
-        //foreach (DependencyInfo dependency in packageDependencies) {
-        //  //ensure framework match also for wildcards (to get them added exclusively for the target framework)
-        //  dependency.DedicatedToTargetFramework = onlyForTargetFramework;
-        //}
-      }
+    //    //foreach (DependencyInfo dependency in packageDependencies) {
+    //    //  //ensure framework match also for wildcards (to get them added exclusively for the target framework)
+    //    //  dependency.DedicatedToTargetFramework = onlyForTargetFramework;
+    //    //}
+    //  }
 
-      Dictionary<DependencyInfo,bool> depsToEnsure = new Dictionary<DependencyInfo, bool>(
-         filteredDependencyGetter().Select((d) => new KeyValuePair<DependencyInfo, bool>(d, false))
-      );
+    //  Dictionary<DependencyInfo,bool> depsToEnsure = new Dictionary<DependencyInfo, bool>(
+    //     filteredDependencyGetter().Select((d) => new KeyValuePair<DependencyInfo, bool>(d, false))
+    //  );
 
-      const bool notOrphaned = true;
+    //  const bool notOrphaned = true;
 
-      foreach (DependencyInfo dependencyToWrite in packageDependencies) {
-
-
-        bool foundAnyMatch = false;
-        foreach(KeyValuePair<DependencyInfo, bool> match in depsToEnsure.Where(
-          (kvp)=> kvp.Key.TargetPackageId == dependencyToWrite.TargetPackageId && (
-            string.IsNullOrWhiteSpace(dependencyToWrite.DedicatedToTargetFramework) ||
-            kvp.Key.DedicatedToTargetFramework == dependencyToWrite.DedicatedToTargetFramework
-          )
-        ).ToArray()) {
-
-          foundAnyMatch = true;
-          depsToEnsure[match.Key] = notOrphaned;
-          if (updateExisiting) {
-            match.Key.TargetPackageVersionConstraint = dependencyToWrite.TargetPackageVersionConstraint;
-          }
-        }
-
-        if (!foundAnyMatch && addNew) {
-          if(!string.IsNullOrWhiteSpace(onlyForTargetFramework) && onlyForTargetFramework != dependencyToWrite.DedicatedToTargetFramework) {
-            DependencyInfo clone = new DependencyInfo { 
-              DedicatedToTargetFramework = onlyForTargetFramework,
-              TargetPackageId = dependencyToWrite.TargetPackageId,
-              TargetPackageVersionConstraint = dependencyToWrite.TargetPackageVersionConstraint
-            };
-            depsToEnsure.Add(clone, notOrphaned);
-          }
-          else {
-            depsToEnsure.Add(dependencyToWrite, notOrphaned);
-          }      
-        }
-
-      }
-
-      IEnumerable<DependencyInfo> entriesToPreserve;
-      if (deleteOthers) {
-        entriesToPreserve = depsToEnsure.Where((kvp) => kvp.Value == notOrphaned).Select((kvp) => kvp.Key);
-      }
-      else {
-        entriesToPreserve = depsToEnsure.Select((kvp)=>kvp.Key);
-      }
-
-      IEnumerable<DependencyInfo> result = dependenciesToSkipGetter().Union(entriesToPreserve);
-
-      if (!SkipSorting) {
-        result = result.OrderBy((d) => d.DedicatedToTargetFramework);
-      }
-      _DependencySetter(result);
-
-    }
+    //  foreach (DependencyInfo dependencyToWrite in packageDependencies) {
 
 
+    //    bool foundAnyMatch = false;
+    //    foreach(KeyValuePair<DependencyInfo, bool> match in depsToEnsure.Where(
+    //      (kvp)=> kvp.Key.TargetPackageId == dependencyToWrite.TargetPackageId && (
+    //        string.IsNullOrWhiteSpace(dependencyToWrite.DedicatedToTargetFramework) ||
+    //        kvp.Key.DedicatedToTargetFramework == dependencyToWrite.DedicatedToTargetFramework
+    //      )
+    //    ).ToArray()) {
 
+    //      foundAnyMatch = true;
+    //      depsToEnsure[match.Key] = notOrphaned;
+    //      if (updateExisiting) {
+    //        match.Key.TargetPackageVersionConstraint = dependencyToWrite.TargetPackageVersionConstraint;
+    //      }
+    //    }
 
+    //    if (!foundAnyMatch && addNew) {
+    //      if(!string.IsNullOrWhiteSpace(onlyForTargetFramework) && onlyForTargetFramework != dependencyToWrite.DedicatedToTargetFramework) {
+    //        DependencyInfo clone = new DependencyInfo { 
+    //          DedicatedToTargetFramework = onlyForTargetFramework,
+    //          TargetPackageId = dependencyToWrite.TargetPackageId,
+    //          TargetPackageVersionConstraint = dependencyToWrite.TargetPackageVersionConstraint
+    //        };
+    //        depsToEnsure.Add(clone, notOrphaned);
+    //      }
+    //      else {
+    //        depsToEnsure.Add(dependencyToWrite, notOrphaned);
+    //      }      
+    //    }
+
+    //  }
+
+    //  IEnumerable<DependencyInfo> entriesToPreserve;
+    //  if (deleteOthers) {
+    //    entriesToPreserve = depsToEnsure.Where((kvp) => kvp.Value == notOrphaned).Select((kvp) => kvp.Key);
+    //  }
+    //  else {
+    //    entriesToPreserve = depsToEnsure.Select((kvp)=>kvp.Key);
+    //  }
+
+    //  IEnumerable<DependencyInfo> result = dependenciesToSkipGetter().Union(entriesToPreserve);
+
+    //  if (!SkipSorting) {
+    //    result = result.OrderBy((d) => d.DedicatedToTargetFramework);
+    //  }
+    //  _DependencySetter(result);
+
+    //}
 
     /// <summary>
     /// Writes package dependencies according to the requested update mode.
@@ -114,11 +112,14 @@ namespace Utils {
       bool addNew,
       bool updateExisiting,
       bool deleteOthers,
+      bool allowDowngrade,
       string onlyForTargetFramework
     ) {
       if (packageDependencies == null) {
         packageDependencies = new DependencyInfo[0];
       }
+
+      var originalColor = Console.ForegroundColor;
 
       DependencyInfo[] existingDependencies = _DependencyGetter()
         .Where((dependency) => dependency != null)
@@ -147,6 +148,7 @@ namespace Utils {
             );
           })
           .ToArray();
+        Console.WriteLine($"Skipping {dependenciesToSkip.Length} dependencies on target belonging to other frameworks...");
 
         packageDependencies = packageDependencies
           .Where((dependency) => {
@@ -171,20 +173,37 @@ namespace Utils {
       bool changed = false;
 
       foreach (DependencyInfo dependencyToWrite in packageDependencies) {
+        Console.Write("   " + dependencyToWrite.ToString() + " -> ");
+
         DependencyInfo[] matches = result
           .Where((existingDependency) => {
-            return this.IsMatchingDependency(existingDependency, dependencyToWrite);
+            return this.IsMatchingDependency(existingDependency, dependencyToWrite, true, true);
           })
           .ToArray();
 
         if (matches.Length > 0) {
           foreach (DependencyInfo match in matches) {
+
             if (updateExisiting) {
-              if (!this.HasSameVersion(match, dependencyToWrite)) {
+              if (this.ShouldUpdateVersion(match, dependencyToWrite, allowDowngrade)) {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"UPDATED (from '{match.TargetPackageVersionConstraint.ToString(true)}' to '{dependencyToWrite.TargetPackageVersionConstraint.ToString(true)}')");
+                Console.ForegroundColor = originalColor;
                 match.TargetPackageVersionConstraint = dependencyToWrite.TargetPackageVersionConstraint;
                 changed = true;
               }
+              else {
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine($"skipped (existing version is {match.TargetPackageVersionConstraint.ToString(true)})");
+                Console.ForegroundColor = originalColor;
+              }
             }
+            else {
+              Console.ForegroundColor = ConsoleColor.Gray;
+              Console.WriteLine("skipped (update-exisiting not requestd)");
+              Console.ForegroundColor = originalColor;
+            }
+
           }
         }
         else {
@@ -206,7 +225,16 @@ namespace Utils {
             }
 
             result.Add(dependencyToAdd);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"ADDED NEW ('{dependencyToAdd.TargetPackageVersionConstraint.ToString(true)}')");
+            Console.ForegroundColor = originalColor;
             changed = true;
+          }
+          else {
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("skipped (add-new not requested)");
+            Console.ForegroundColor = originalColor;
+
           }
         }
       }
@@ -215,16 +243,34 @@ namespace Utils {
         DependencyInfo[] filteredResult = result
           .Where((existingDependency) => {
             return packageDependencies.Any((dependencyToWrite) => {
-              return this.IsMatchingDependency(existingDependency, dependencyToWrite);
+              return this.IsMatchingDependency(existingDependency, dependencyToWrite, true, true);
             });
           })
           .ToArray();
 
         if (filteredResult.Length != result.Count) {
           changed = true;
+          foreach (DependencyInfo deletedDependency in result.Except(filteredResult)) {
+            Console.Write($"   {deletedDependency.ToString()} -> "); 
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"DELETED"); 
+            Console.ForegroundColor = originalColor;
+          }
         }
+        else {
+          Console.ForegroundColor = ConsoleColor.Gray;
+          Console.WriteLine("   Deletion -> skipped (no items to delete)");
+          Console.ForegroundColor = originalColor;
 
+        }
         result = filteredResult.ToList();
+
+      }
+      else {
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.WriteLine("   Any deletion -> skipped (not requested)");
+        Console.ForegroundColor = originalColor;
+
       }
 
       if (!changed) {
@@ -249,30 +295,36 @@ namespace Utils {
     /// <summary>
     /// Determines whether two dependency entries describe the same package scope.
     /// </summary>
-    private bool IsMatchingDependency(DependencyInfo existingDependency, DependencyInfo dependencyToWrite) {
-      if (existingDependency == null) {
+    private bool IsMatchingDependency(
+      DependencyInfo leftDependency, DependencyInfo rightDependency,
+      bool matchWhenEmptyFxInfoOnLeft, bool matchWhenEmptyFxInfoOnRight
+    ) {
+      if (leftDependency == null) {
         return false;
       }
 
-      if (dependencyToWrite == null) {
+      if (rightDependency == null) {
         return false;
       }
 
       if (!string.Equals(
-        existingDependency.TargetPackageId,
-        dependencyToWrite.TargetPackageId,
+        leftDependency.TargetPackageId,
+        rightDependency.TargetPackageId,
         StringComparison.OrdinalIgnoreCase
       )) {
         return false;
       }
 
-      if (string.IsNullOrWhiteSpace(dependencyToWrite.DedicatedToTargetFramework)) {
+      if (matchWhenEmptyFxInfoOnLeft && string.IsNullOrWhiteSpace(leftDependency.DedicatedToTargetFramework)) {
+        return true;
+      }
+      if (matchWhenEmptyFxInfoOnRight && string.IsNullOrWhiteSpace(rightDependency.DedicatedToTargetFramework)) {
         return true;
       }
 
       return string.Equals(
-        existingDependency.DedicatedToTargetFramework,
-        dependencyToWrite.DedicatedToTargetFramework,
+        leftDependency.DedicatedToTargetFramework,
+        rightDependency.DedicatedToTargetFramework,
         StringComparison.OrdinalIgnoreCase
       );
     }
@@ -280,21 +332,52 @@ namespace Utils {
     /// <summary>
     /// Determines whether two dependency entries use the same version constraint.
     /// </summary>
-    private bool HasSameVersion(DependencyInfo existingDependency, DependencyInfo dependencyToWrite) {
+    private bool ShouldUpdateVersion(
+      DependencyInfo existingDependency, DependencyInfo dependencyToWrite, bool allowDowngrade
+    ) {
+
       if (existingDependency.TargetPackageVersionConstraint == null) {
-        return dependencyToWrite.TargetPackageVersionConstraint == null;
+        return dependencyToWrite.TargetPackageVersionConstraint != null;
       }
 
       if (dependencyToWrite.TargetPackageVersionConstraint == null) {
-        return false;
+        return true;
       }
 
-      return string.Equals(
-        existingDependency.TargetPackageVersionConstraint.ToString(),
-        dependencyToWrite.TargetPackageVersionConstraint.ToString(),
-        StringComparison.Ordinal
-      );
+      string existingVersionString = existingDependency.TargetPackageVersionConstraint.ToString(cleanMinVersion: true);
+      string incommingVersionString = dependencyToWrite.TargetPackageVersionConstraint.ToString(cleanMinVersion: true);
+      int existingVersionPrereleaseIndex = existingVersionString.IndexOf('-');
+      int incommingVersionPrereleaseIndex = incommingVersionString.IndexOf('-');
+      Version existingVersion = Version.Parse(existingVersionPrereleaseIndex >= 0 ? existingVersionString.Substring(0, existingVersionPrereleaseIndex) : existingVersionString);
+      Version incommingVersion = Version.Parse(incommingVersionPrereleaseIndex >= 0 ? incommingVersionString.Substring(0, incommingVersionPrereleaseIndex) : incommingVersionString); 
+
+      if (existingVersion < incommingVersion) {
+        return true; //REGULAR-HIGHER
+      }
+      if (existingVersion > incommingVersion) {
+        return allowDowngrade; //REGULAR-LOWER
+      }
+      //REGULAR-EQUAL:
+      if (existingVersionPrereleaseIndex < 0) {
+        if (incommingVersionPrereleaseIndex < 0) {
+          return false; //(none is prerelease) -> nothing to do
+        }
+        else {
+          return allowDowngrade; //transition from non-prerelease to prerelease (=DOWNGRADE)
+        }
+      }
+      else {
+        if (incommingVersionPrereleaseIndex < 0) {
+          return true; //transition from prerelease to non-prerelease (=UPGRADE)
+
+        }
+        else {
+          return true; //(both are prelease) -> update should set the new one (sidewart)
+        }
+      }
+
     }
+
   }
 
 }

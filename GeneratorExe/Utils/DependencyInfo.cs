@@ -28,6 +28,10 @@ namespace Versioning {
 
     public VersionContraint TargetPackageVersionConstraint { get; set; } = null;
 
+    public override string ToString() {
+      return $"{this.TargetPackageId} {this.TargetPackageVersionConstraint} {this.DedicatedToTargetFramework}";
+    }
+
   }
 
   [DebuggerDisplay("{ConstraintPattern}")]
@@ -287,4 +291,4 @@ namespace Versioning {
 
   }
 
- }
+}

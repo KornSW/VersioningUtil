@@ -26,7 +26,7 @@ namespace FileIO {
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
       bool addNew, bool updateExisiting, bool deleteOthers,
-      string onlyForTargetFramework
+      bool allowDowngrade, string onlyForTargetFramework
     ) {
 
       DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
@@ -34,7 +34,7 @@ namespace FileIO {
       );
 
       updateHelper.WritePackageDependencies(
-        packageDependencies, addNew, updateExisiting, deleteOthers, onlyForTargetFramework
+        packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
       );
 
     }
