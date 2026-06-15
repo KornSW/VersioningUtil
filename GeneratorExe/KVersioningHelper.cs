@@ -6,11 +6,12 @@ using System.Linq;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Utils;
 
 namespace Versioning {
 
-  public class KVersioningHelper {
+  public partial class KVersioningHelper {
 
     public void ImportGitCommentsIntoChangelog(
       string versioninfoFile = "versioninfo.json",
@@ -654,12 +655,18 @@ namespace Versioning {
         IVersionContainer tgt = InitializeVersionContainerByFileType(metaDataSourceFile);
         VersionInfo vers = tgt.ReadVersion();
 
+        Console.WriteLine($"Setting AzureDevOps-BUILD-NUMBER to '{vers.currentVersionWithSuffix}'...");
         Console.WriteLine($"##vso[build.updatebuildnumber]{vers.currentVersionWithSuffix}");
 
       }
       catch (Exception ex) {
         Console.WriteLine(ex.Message);
       }
+    }
+
+    private void SetAzureDevOpsVariable(string name, object value) {
+      Console.WriteLine($"Setting AzureDevOps-Variable $({name}) to '{value}'...");
+      Console.WriteLine($"##vso[task.setvariable variable={name}]{value}");
     }
 
     /// <summary>
@@ -671,18 +678,18 @@ namespace Versioning {
         IVersionContainer tgt = InitializeVersionContainerByFileType(metaDataSourceFile);
         VersionInfo vers = tgt.ReadVersion();
 
-        Console.WriteLine($"##vso[task.setvariable variable=PreviousVersion]{vers.previousVersion}");
-        Console.WriteLine($"##vso[task.setvariable variable=ChangeGrade]{vers.changeGrade}");
-        Console.WriteLine($"##vso[task.setvariable variable=CurrentVersion]{vers.currentVersion}");
-        Console.WriteLine($"##vso[task.setvariable variable=PreReleaseSuffix]{vers.releaseType}");
-        Console.WriteLine($"##vso[task.setvariable variable=ReleaseType]{vers.releaseType}");
-        Console.WriteLine($"##vso[task.setvariable variable=CurrentVersionWithSuffix]{vers.currentVersionWithSuffix}");
-        Console.WriteLine($"##vso[task.setvariable variable=CurrentMajor]{vers.currentMajor}");
-        Console.WriteLine($"##vso[task.setvariable variable=CurrentMinor]{vers.currentMinor}");
-        Console.WriteLine($"##vso[task.setvariable variable=CurrentFix]{vers.currentFix}");
-        Console.WriteLine($"##vso[task.setvariable variable=VersionDateInfo]{vers.versionDateInfo}");
-        Console.WriteLine($"##vso[task.setvariable variable=VersionTimeInfo]{vers.versionTimeInfo}");
-        Console.WriteLine($"##vso[task.setvariable variable=VersionNotes]{vers.versionNotes}");
+        SetAzureDevOpsVariable("PreviousVersion", vers.previousVersion);
+        SetAzureDevOpsVariable("ChangeGrade", vers.changeGrade);
+        SetAzureDevOpsVariable("CurrentVersion", vers.currentVersion);
+        SetAzureDevOpsVariable("PreReleaseSuffix", vers.releaseType);
+        SetAzureDevOpsVariable("ReleaseType", vers.releaseType);
+        SetAzureDevOpsVariable("CurrentVersionWithSuffix", vers.currentVersionWithSuffix);
+        SetAzureDevOpsVariable("CurrentMajor", vers.currentMajor);
+        SetAzureDevOpsVariable("CurrentMinor", vers.currentMinor);
+        SetAzureDevOpsVariable("CurrentFix", vers.currentFix);
+        SetAzureDevOpsVariable("VersionDateInfo", vers.versionDateInfo);
+        SetAzureDevOpsVariable("VersionTimeInfo", vers.versionTimeInfo);
+        SetAzureDevOpsVariable("VersionNotes", vers.versionNotes);
       }
       catch (Exception ex) {
         Console.WriteLine(ex.Message);

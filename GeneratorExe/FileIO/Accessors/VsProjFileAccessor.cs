@@ -338,24 +338,38 @@ namespace FileIO {
 
     }
 
+    public bool CanRepresentDependencyScopes() {
+      //HACK: ich glaube irgendwie geht das doch bei multi-target projekten...
+      return false;
+    }
+
+    public bool UsesDependencyScopes() {
+      //HACK: ich glaube irgendwie geht das doch bei multi-target projekten...
+      return false;
+    }
+
+    public string[] GetDependencyScopes() {
+      return this.GetDotNetVersionRaw().Split(";");
+    }
+
     #region HELPER 1 
 
-    internal void OnPackageConfigChanged(IVersionContainer packageConfig) {
+    //internal void OnPackageConfigChanged(IVersionContainer packageConfig) {
 
-      //syncchinisiert die Abhängigkeiten aus der packages.config (führend)
-      //zurück in die .csproj/.vbproj, damit sie dort auch immer aktuell sind
+    //  //syncchinisiert die Abhängigkeiten aus der packages.config (führend)
+    //  //zurück in die .csproj/.vbproj, damit sie dort auch immer aktuell sind
 
-      DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
-         () => ReadPackageDependenciesLocal(false), (deps) => OverwriteAllLocalPackageDependencies(deps.ToArray())
-      );
+    //  DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
+    //     () => ReadPackageDependenciesLocal(false), (deps) => OverwriteAllLocalPackageDependencies(deps.ToArray())
+    //  );
 
-      DependencyInfo[] realExsistingPackageEntries = packageConfig.ReadPackageDependencies(true);
+    //  DependencyInfo[] realExsistingPackageEntries = packageConfig.ReadPackageDependencies(true);
 
-      updateHelper.WritePackageDependencies(
-        realExsistingPackageEntries, true, true, true, true, null
-      );
+    //  updateHelper.WritePackageDependencies(
+    //    realExsistingPackageEntries, true, true, true, true, null
+    //  );
 
-    }
+    //}
 
     /// <summary>
     /// vor allem bei .NET Framework Projekten wichtig,

@@ -120,6 +120,10 @@ namespace FileIO {
          () => ReadPackageDependencies(true), (deps) => OverwriteAllPackageDependencies(deps.ToArray())
       );
 
+      if (!string.IsNullOrWhiteSpace(onlyForTargetFramework)) {
+        updateHelper.FrameworkSpecificMatching = true;
+      }
+
       updateHelper.WritePackageDependencies(
         packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
       );
@@ -503,11 +507,54 @@ namespace FileIO {
     /// <summary>
     /// Adds an XML element using the normal NuSpec indentation.
     /// </summary>
-    private void AddElementWithNuspecIndent(XElement containerElement, XElement childElement) {
+    //private void AddElementWithNuspecIndent(XElement containerElement, XElement childElement) {
+    //  containerElement.Add(
+    //    new XText(Environment.NewLine + "      "),
+    //    childElement,
+    //    new XText(Environment.NewLine + "    ")
+    //  );
+    //}
+    /// <summary>
+    /// Adds an XML element while preserving existing NuSpec indentation.
+    /// </summary>
+    private void AddElementWithNuspecIndent(
+      XElement containerElement,
+      XElement childElement
+    ) {
+      string childIndent = "  ";
+      string containerIndent = "";
+
+      XElement firstChild = containerElement.Elements().FirstOrDefault();
+
+      if (firstChild != null) {
+        XText precedingText = firstChild.PreviousNode as XText;
+
+        if (precedingText != null) {
+          string text = precedingText.Value;
+          int newLineIndex = text.LastIndexOf('\n');
+
+          if (newLineIndex >= 0) {
+            childIndent = text.Substring(newLineIndex + 1);
+
+            if (childIndent.Length >= 2) {
+              containerIndent = childIndent.Substring(0, childIndent.Length - 2);
+            }
+          }
+        }
+      }
+
+      XNode lastNode = containerElement.Nodes().LastOrDefault();
+
+      if (lastNode is XText lastTextNode) {
+        lastTextNode.Value = Environment.NewLine + childIndent;
+      }
+      else {
+        containerElement.Add(new XText(Environment.NewLine + childIndent));
+      }
+
       containerElement.Add(
-        new XText(Environment.NewLine + "      "),
         childElement,
-        new XText(Environment.NewLine + "    ")
+        new XText(Environment.NewLine + containerIndent)
       );
     }
 
@@ -539,6 +586,64 @@ namespace FileIO {
 
       using (XmlWriter writer = XmlWriter.Create(this._FileFullName, settings)) {
         document.Save(writer);
+      }
+    }
+
+    public bool CanRepresentDependencyScopes() {
+      return true;
+    }
+
+    /// <summary>
+    /// Gets whether this NuSpec currently uses framework-specific dependency groups.
+    /// </summary>
+    public bool UsesDependencyScopes() {
+      XDocument document = this.LoadNuspecDocument();
+      XElement dependenciesElement = this.GetDependenciesElement(document);
+
+      if (dependenciesElement == null) {
+        return false;
+      }
+
+      XName groupName = dependenciesElement.Name.Namespace + "group";
+
+      return dependenciesElement
+        .Elements(groupName)
+        .Any();
+    }
+
+    /// <summary>
+    /// Gets all framework-specific dependency scopes currently used by this NuSpec.
+    /// </summary>
+    public string[] GetDependencyScopes() {
+      XDocument document = this.LoadNuspecDocument();
+      XElement dependenciesElement = this.GetDependenciesElement(document);
+
+      if (dependenciesElement == null) {
+        return new string[0];
+      }
+
+      XName groupName = dependenciesElement.Name.Namespace + "group";
+
+      return dependenciesElement
+        .Elements(groupName)
+        .Select((groupElement) => {
+          return this.ReadAttributeValue(groupElement, "targetFramework");
+        })
+        .Where((targetFramework) => {
+          return !string.IsNullOrWhiteSpace(targetFramework);
+        })
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    }
+
+    /// <summary>
+    /// Loads the NuSpec XML document from either a nuspec file or a nupkg package.
+    /// </summary>
+    private XDocument LoadNuspecDocument() {
+      string rawContent = _NuspecFileReader();
+
+      using (TextReader reader = new StringReader(rawContent)) {
+        return XDocument.Load(reader, LoadOptions.PreserveWhitespace);
       }
     }
 

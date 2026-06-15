@@ -22,6 +22,7 @@ namespace Utils {
     }
 
     public bool SkipSorting { get; set; } = false;
+    public bool FrameworkSpecificMatching { get; set; } = false;
 
     //public void WritePackageDependencies2(
     //  DependencyInfo[] packageDependencies,
@@ -172,12 +173,17 @@ namespace Utils {
       List<DependencyInfo> result = dependenciesToModify.ToList();
       bool changed = false;
 
+      bool matchWhenEmptyFxInfoOnLeft = true;
+      if (this.FrameworkSpecificMatching) {
+        matchWhenEmptyFxInfoOnLeft = false;
+      }
+
       foreach (DependencyInfo dependencyToWrite in packageDependencies) {
         Console.Write("   " + dependencyToWrite.ToString() + " -> ");
 
         DependencyInfo[] matches = result
           .Where((existingDependency) => {
-            return this.IsMatchingDependency(existingDependency, dependencyToWrite, true, true);
+            return this.IsMatchingDependency(existingDependency, dependencyToWrite, matchWhenEmptyFxInfoOnLeft, true);
           })
           .ToArray();
 
@@ -243,7 +249,7 @@ namespace Utils {
         DependencyInfo[] filteredResult = result
           .Where((existingDependency) => {
             return packageDependencies.Any((dependencyToWrite) => {
-              return this.IsMatchingDependency(existingDependency, dependencyToWrite, true, true);
+              return this.IsMatchingDependency(existingDependency, dependencyToWrite, matchWhenEmptyFxInfoOnLeft, true);
             });
           })
           .ToArray();

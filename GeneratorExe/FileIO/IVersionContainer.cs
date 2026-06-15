@@ -6,7 +6,7 @@ using Versioning;
 
 namespace FileIO {
 
-  public interface IVersionContainer {
+  public interface IVersionContainer : IDependencyScopeCapabilities {
 
     void WriteVersion(VersionInfo versionInfo);
 
@@ -19,6 +19,25 @@ namespace FileIO {
     );
 
     DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo);
+
+  }
+
+  public interface IDependencyScopeCapabilities {
+
+    /// <summary>
+    /// Gets whether this container can represent framework-specific dependency scopes at all.
+    /// </summary>
+    bool CanRepresentDependencyScopes();
+
+    /// <summary>
+    /// Gets whether this container currently uses framework-specific dependency scopes.
+    /// </summary>
+    bool UsesDependencyScopes();
+
+    /// <summary>
+    /// Gets the currently existing dependency scopes.
+    /// </summary>
+    string[] GetDependencyScopes();
 
   }
 

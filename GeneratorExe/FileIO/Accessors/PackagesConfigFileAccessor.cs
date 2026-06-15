@@ -283,6 +283,18 @@ namespace FileIO {
       Thread.Sleep(700);
     }
 
+    public bool CanRepresentDependencyScopes() {
+      return false;
+    }
+
+    public bool UsesDependencyScopes() {
+      return false;
+    }
+
+    public string[] GetDependencyScopes() {
+      return Array.Empty<string>();
+    }
+
   }
 
 }

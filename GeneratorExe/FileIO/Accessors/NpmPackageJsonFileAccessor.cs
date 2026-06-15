@@ -71,6 +71,18 @@ namespace FileIO {
       return new DependencyInfo[] { };
     }
 
+    public bool CanRepresentDependencyScopes() {
+      return false;
+    }
+
+    public bool UsesDependencyScopes() {
+      return false;
+    }
+
+    public string[] GetDependencyScopes() {
+      return Array.Empty<string>();
+    }
+
   }
 
 }
