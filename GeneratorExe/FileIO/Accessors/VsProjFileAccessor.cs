@@ -21,7 +21,7 @@ namespace FileIO {
     /// <summary>
     /// nur die dependencies IN der projekt-datei (d.h. bei .net-fx projekte die assembly-referenzen, die in verbindung mit nuget-packeten stehen) - nicht die packages.config-datei, die bei .net-fx projekte führend ist!
     /// </summary>
-    internal DependencyUpdateHelper _LocalUpdateHelper;
+    internal DependencyUpdateHelper2 _LocalUpdateHelper;
 
     public VsProjFileAccessor(string fileFullName) {
 
@@ -31,7 +31,7 @@ namespace FileIO {
         throw new FileNotFoundException("Could not find File: " + fileFullName);
       }
 
-      _LocalUpdateHelper = new DependencyUpdateHelper(
+      _LocalUpdateHelper = new DependencyUpdateHelper2(this,
         () => ReadPackageDependenciesLocal(false), (deps) => OverwriteAllLocalPackageDependencies(deps.ToArray())
       );
 
@@ -173,15 +173,17 @@ namespace FileIO {
 
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
-      bool addNew, bool updateExisiting, bool deleteOthers,
-      bool allowDowngrade, string onlyForTargetFramework
+      bool addNew, bool updateExisiting, bool deleteOthers, bool allowDowngrade, 
+      string onlyForTargetFramework, string[] packageIdWhitelist, string[] packageIdBlacklist
     ) {
 
       IVersionContainer target = this.GetContainerOfDependencies(true);
       if(target != this) {
         //für .net-fx wird hier auf die packages.config umgeleitet...
         target.WritePackageDependencies(
-          packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
+          packageDependencies, 
+          addNew, updateExisiting, deleteOthers, allowDowngrade,
+          onlyForTargetFramework, packageIdWhitelist, packageIdBlacklist
         );
         return;
       }

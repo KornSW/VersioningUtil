@@ -6,7 +6,8 @@
 
 ## Upcoming Changes
 
-*(none)*
+* **new Feature**: the 'DoMagic'-Method to run the full workflow
+* many fixes regarding target-framework-routing
 
 
 

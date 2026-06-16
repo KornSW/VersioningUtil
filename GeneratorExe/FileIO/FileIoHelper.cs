@@ -63,7 +63,7 @@ namespace FileIO {
     public static bool WriteFile(string fileFullName, string rawContent,bool retryOnWriteProtect = true) {
       try {
         using (FileStream fs = new FileStream(fileFullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {
-          using (StreamWriter sw = new StreamWriter(fs, Encoding.Default)) {
+          using (StreamWriter sw = new StreamWriter(fs, new UTF8Encoding(true))) {
             sw.Write(rawContent);
             sw.Flush();
           }

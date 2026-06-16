@@ -78,16 +78,18 @@ namespace FileIO {
 
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
-      bool addNew, bool updateExisiting, bool deleteOthers,
-      bool allowDowngrade, string onlyForTargetFramework
+      bool addNew, bool updateExisiting, bool deleteOthers, bool allowDowngrade,
+      string onlyForTargetFramework, string[] packageIdWhitelist, string[] packageIdBlacklist
     ) {
 
-      DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
+      DependencyUpdateHelper2 updateHelper = new DependencyUpdateHelper2(this,
          () => ReadPackageDependencies(true), (deps) => OverwriteAllPackageDependencies(deps.ToArray())
       );
 
       updateHelper.WritePackageDependencies(
-        packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
+        packageDependencies,
+        addNew, updateExisiting, deleteOthers, allowDowngrade,
+        onlyForTargetFramework, packageIdWhitelist, packageIdBlacklist
       );
 
       if(_ProjectFileAccessor != null) {

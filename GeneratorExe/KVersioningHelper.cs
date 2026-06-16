@@ -74,7 +74,7 @@ namespace Versioning {
         (commitDate, commitMessage) => {
           allLinesOfChanglogFile.Insert(upcommingChangesIndex + 1, "* " + commitMessage);
         },
-        lastVersionTag,
+        //lastVersionTag,
         lastVersionTime,
         ignoreBySubstring
       );
@@ -84,7 +84,12 @@ namespace Versioning {
     }
 
     public void GetGitHistorySinceTag(string startAfterTag = "", DateTime startAfterDate = default, string ignoreBySubstring = "VERSIONING") {
-      this.GetGitHistorySinceTag((d,m) => { }, startAfterTag, startAfterDate, ignoreBySubstring);
+      this.GetGitHistorySinceTag(
+        (d,m) => { },
+        //startAfterTag,
+        startAfterDate,
+        ignoreBySubstring
+      );
     }
 
     /// <summary>
@@ -158,7 +163,11 @@ namespace Versioning {
           //...fallback to git-history
           List<string> gitHistoryLines = new List<string>();
           Console.WriteLine("Found no new entries within Changelog - doing fallback via git-history [BETA]...");
-          this.GetGitHistorySinceTag((d,msg)=> gitHistoryLines.Add(msg), lastVersionStringFromMdHeadline, default);
+          this.GetGitHistorySinceTag(
+            (d,msg)=> gitHistoryLines.Add(msg),
+            //lastVersionStringFromMdHeadline,
+            default
+          );
           string[] changesFromGit = gitHistoryLines.ToArray();
           foreach (string change in changesFromGit) {
             Console.WriteLine(" detected git commit: " + change);
@@ -540,7 +549,9 @@ namespace Versioning {
         try {
           IVersionContainer tgt = InitializeVersionContainerByFileType(fileFullName);
           tgt.WritePackageDependencies(
-            newDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
+            newDependencies, 
+            addNew, updateExisiting, deleteOthers, allowDowngrade,
+            onlyForTargetFramework, new string[] { "*" }, new string[] { }
           );
         }
         catch (Exception ex) {
@@ -972,69 +983,110 @@ namespace Versioning {
       return false;
     }
 
-    private bool GetGitHistorySinceTag(Action<DateTime, string> callback, string startAfterTag = "", DateTime startAfterDate = default, string ignoreBySubstring = "VERSIONING") {
+    private bool GetGitHistorySinceTag(
+    Action<DateTime, string> callback,
+      DateTime startAfterDate = default,
+      string ignoreBySubstring = "VERSIONING"
+    ) {
       try {
 
-        System.Diagnostics.Process p = new System.Diagnostics.Process();
-
         string tagFilter = string.Empty;
-        if (!string.IsNullOrWhiteSpace(startAfterTag)) {
-          tagFilter = $"{startAfterTag}..HEAD";
-        }
 
-        p.StartInfo.FileName = "git";
-        p.StartInfo.UseShellExecute = false;
-        p.StartInfo.Arguments = $"log {tagFilter} --pretty=format:[%ai]%s";
-        p.StartInfo.CreateNoWindow = true;
-        p.StartInfo.RedirectStandardOutput = true;
-        p.StartInfo.RedirectStandardError = true;
-        p.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
-        p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+        {
+          System.Diagnostics.Process process = new System.Diagnostics.Process();
 
-        p.EnableRaisingEvents = true;
+          process.StartInfo.FileName = "git";
+          process.StartInfo.UseShellExecute = false;
+          process.StartInfo.Arguments = "tag --merged HEAD --sort=-creatordate";
+          process.StartInfo.CreateNoWindow = true;
+          process.StartInfo.RedirectStandardOutput = true;
+          process.StartInfo.RedirectStandardError = true;
+          process.StartInfo.StandardOutputEncoding = Encoding.UTF8;
 
-        Console.WriteLine("Fetching GIT-History: git " + p.StartInfo.Arguments);
+          process.Start();
 
-        p.Start();
+          string tagsOutput = process.StandardOutput.ReadToEnd();
 
-        string output = p.StandardOutput.ReadToEnd();
-        string error = p.StandardError.ReadToEnd();
+          using (StringReader reader = new StringReader(tagsOutput)) {
+            string tag = reader.ReadLine();
 
-        if (string.IsNullOrWhiteSpace(output)) {
+            while (!string.IsNullOrWhiteSpace(tag)) {
 
-          if (!string.IsNullOrWhiteSpace(error)) {
-            if (error.Contains("unknown revision") && !string.IsNullOrWhiteSpace(startAfterTag)) {
-              Console.WriteLine($"WARNING: given Tag '{startAfterTag}' seems to be unknown - ignoring it!");
-              return GetGitHistorySinceTag(callback, default, startAfterDate, ignoreBySubstring);
+              Match match = Regex.Match(
+                tag,
+                @"(?<!\d)(\d+\.\d+(?:\.\d+){0,2})(?!\d)"
+              );
+
+              if (match.Success) {
+                Version version;
+
+                if (Version.TryParse(match.Groups[1].Value, out version)) {
+                  tagFilter = $"{tag.Trim()}..HEAD";
+                  Console.WriteLine($"Using version tag '{tag.Trim()}' as changelog boundary");
+                  break;
+                }
+              }
+
+              tag = reader.ReadLine();
             }
           }
-
-          Console.WriteLine($"ERROR FROM GIT-COMMAND: {error}");
-          return false;
         }
 
-        var hsr = new StringReader(output);
-        string historyline = hsr.ReadLine();
-        while (!string.IsNullOrWhiteSpace(historyline)) {
+        System.Diagnostics.Process logProcess = new System.Diagnostics.Process();
 
-          if (!string.IsNullOrWhiteSpace(historyline) && historyline.StartsWith("[")) {
+        logProcess.StartInfo.FileName = "git";
+        logProcess.StartInfo.UseShellExecute = false;
+        logProcess.StartInfo.Arguments = $"log {tagFilter} --pretty=format:%ai%x1f%s";
+        logProcess.StartInfo.CreateNoWindow = true;
+        logProcess.StartInfo.RedirectStandardOutput = true;
+        logProcess.StartInfo.RedirectStandardError = true;
+        logProcess.StartInfo.StandardOutputEncoding = Encoding.UTF8;
 
-            string commitDateString = historyline.Substring(1, 19); //[2024-02-16 16:28:37 +0100]
-            DateTime commitDate = DateTime.Parse(commitDateString);
-            string commitMessage = historyline.Substring(27).Replace("[skip ci]", "").Trim();
+        logProcess.Start();
 
-            if (string.IsNullOrWhiteSpace(ignoreBySubstring) || !commitMessage.Contains(ignoreBySubstring)) {
-              if (commitDate > startAfterDate) {
-                Console.WriteLine($" {commitDate:yyyy-MM-dd} {commitDate:HH:mm} - {commitMessage}");
+        string output = logProcess.StandardOutput.ReadToEnd();
+
+        int importedCommitCount = 0;
+
+        using (StringReader reader = new StringReader(output)) {
+          string historyLine = reader.ReadLine();
+
+          while (!string.IsNullOrWhiteSpace(historyLine)) {
+
+            string[] columns = historyLine.Split('\x1f');
+
+            if (columns.Length >= 2) {
+
+              DateTime commitDate = DateTime.Parse(columns[0].Substring(0, 19));
+
+              string commitMessage = columns[1]
+                .Replace("[skip ci]", "")
+                .Trim();
+
+              if (
+                commitDate > startAfterDate &&
+                (
+                  string.IsNullOrWhiteSpace(ignoreBySubstring) ||
+                  !commitMessage.Contains(ignoreBySubstring)
+                )
+              ) {
+
                 callback.Invoke(commitDate, commitMessage);
+
+                importedCommitCount++;
+
+                if (importedCommitCount >= 20) {
+                  Console.WriteLine("Stopping GIT-History import after 20 commits.");
+                  break;
+                }
               }
             }
+
+            historyLine = reader.ReadLine();
           }
-
-          historyline = hsr.ReadLine();
         }
-        return true;
 
+        return true;
       }
       catch (Exception ex) {
         Console.WriteLine("ERROR: " + ex.Message);
@@ -1412,7 +1464,10 @@ namespace Versioning {
               projFile.WritePackageDependencies(
                 new DependencyInfo[] { newDependency },
                 addNew: addIfNotExisting, updateExisiting: true, deleteOthers: false, 
-                allowDowngrade: allowDowngrade, onlyForTargetFramework: null
+                allowDowngrade: allowDowngrade,
+                onlyForTargetFramework: null,
+                packageIdWhitelist: new string[] { "*" },
+                packageIdBlacklist: new string[] { }
               );
 
             }
@@ -1437,7 +1492,9 @@ namespace Versioning {
           tgt.WritePackageDependencies(
             new DependencyInfo[] { newDependency }, 
             addNew: addIfNotExisting, updateExisiting: true, deleteOthers: false,
-            allowDowngrade: allowDowngrade, onlyForTargetFramework: null
+            allowDowngrade: allowDowngrade, onlyForTargetFramework: null,
+            packageIdWhitelist: new string[] { "*" },
+            packageIdBlacklist: new string[] { }
           );
 
         }
@@ -1447,6 +1504,96 @@ namespace Versioning {
     }
 
     #endregion
+
+    /// <summary>
+    /// Executes the full Workflow:
+    /// 1: search recursively for a changelog.md file
+    /// 2: create a new changelog-based version (with fallback to git history)
+    /// 3: tell to Azure DevOps to update the buildnumber
+    /// 4: inject version-variables to the Azure DevOps pipeline
+    /// 5: update the version in all project files (and other files) which are matching a given minimatch pattern
+    /// 6: process all nuspec files (recursively) to update their dependency-constraints (if they contain a preprocessor-configuration)
+    /// </summary>
+    public void DoMagic(string entryDirectory = "") {
+
+      if (string.IsNullOrWhiteSpace(entryDirectory)) {
+        entryDirectory = Environment.CurrentDirectory;
+      }
+      entryDirectory = Path.GetFullPath(entryDirectory);
+      if (!Directory.Exists(entryDirectory)) {
+        throw new DirectoryNotFoundException("The entry directory does not exist: " + entryDirectory);
+      }
+
+      string previousCurrentDirectory = Environment.CurrentDirectory;
+
+      try {
+        Environment.CurrentDirectory = entryDirectory;
+
+        string[] changelogFiles = Directory
+          .GetFiles(entryDirectory, "changelog.md", SearchOption.AllDirectories)
+          .Where((fileFullName) => {
+            return !fileFullName.Contains("\\bin\\", StringComparison.OrdinalIgnoreCase) &&
+              !fileFullName.Contains("\\obj\\", StringComparison.OrdinalIgnoreCase) &&
+              !fileFullName.Contains("\\packages\\", StringComparison.OrdinalIgnoreCase) &&
+              !fileFullName.Contains("\\node_modules\\", StringComparison.OrdinalIgnoreCase);
+          })
+          .ToArray();
+
+        if (changelogFiles.Length == 0) {
+          throw new FileNotFoundException("Could not find a changelog.md file below: " + entryDirectory);
+        }
+
+        if (changelogFiles.Length > 1) {
+          throw new InvalidOperationException(
+            "Found more than one changelog.md file. Please run DoMagic from a more specific directory: " +
+            string.Join(" / ", changelogFiles)
+          );
+        }
+
+        string changelogFile = changelogFiles[0];
+        string versionInfoFile = Path.Combine(Path.GetDirectoryName(changelogFile), "versioninfo.json");
+
+        this.CreateNewVersionOnChangelog(
+          versionInfoFile,
+          changelogFile
+        );
+
+        this.InjectIntoAzureDevOpsBuildNumber(versionInfoFile);
+        this.InjectIntoAzureDevOpsVariables(versionInfoFile);
+
+        string versionTargetPattern =
+          "**\\*.csproj;" +
+          "**\\*.vbproj;" +
+          //"**\\*.nuspec;" +
+          "**\\package.json;" +
+          "**\\AssemblyInfo.cs;" +
+          "**\\AssemblyInfo.vb;" +
+          "!**\\bin\\**;" +
+          "!**\\obj\\**;" +
+          "!**\\packages\\**;" +
+          "!**\\node_modules\\**";
+
+        this.ImportVersion(
+          versionTargetPattern,
+          versionInfoFile
+        );
+
+        string nuspecTargetPattern =
+          "**\\*.nuspec;" +
+          "!**\\bin\\**;" +
+          "!**\\obj\\**;" +
+          //"!**\\packages\\**;" +
+          "!**\\node_modules\\**";
+
+        this.ProcessNuspecFiles(
+          nuspecTargetPattern,
+          versionInfoFile
+        );
+      }
+      finally {
+        Environment.CurrentDirectory = previousCurrentDirectory;
+      }
+    }
 
   }
 

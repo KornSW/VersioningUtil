@@ -108,24 +108,26 @@ namespace FileIO {
 
     public void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
-      bool addNew, bool updateExisiting, bool deleteOthers,
-      bool allowDowngrade, string onlyForTargetFramework
+      bool addNew, bool updateExisiting, bool deleteOthers, bool allowDowngrade, 
+      string onlyForTargetFramework, string[] packageIdWhitelist, string[] packageIdBlacklist
     ) {
 
       if (_PackageMode) {
         throw new InvalidOperationException("Direct dependency updates are not supported for already packed .nupkg-packages (this works for .nuspec-files only)");
       }
 
-      DependencyUpdateHelper updateHelper = new DependencyUpdateHelper(
+      DependencyUpdateHelper2 updateHelper = new DependencyUpdateHelper2(this,
          () => ReadPackageDependencies(true), (deps) => OverwriteAllPackageDependencies(deps.ToArray())
       );
 
-      if (!string.IsNullOrWhiteSpace(onlyForTargetFramework)) {
-        updateHelper.FrameworkSpecificMatching = true;
-      }
+      //if (!string.IsNullOrWhiteSpace(onlyForTargetFramework)) {
+      //  updateHelper.FrameworkSpecificMatching = true;
+      //}
 
       updateHelper.WritePackageDependencies(
-        packageDependencies, addNew, updateExisiting, deleteOthers, allowDowngrade, onlyForTargetFramework
+        packageDependencies, 
+        addNew, updateExisiting, deleteOthers, allowDowngrade,
+        onlyForTargetFramework, packageIdWhitelist, packageIdBlacklist
       );
 
     }
@@ -315,7 +317,14 @@ namespace FileIO {
           });
 
         if (matchingDependency == null) {
+          XNode previousNode = dependencyElement.PreviousNode;
+
           dependencyElement.Remove();
+
+          if (previousNode is XText previousTextNode && string.IsNullOrWhiteSpace(previousTextNode.Value)) {
+            previousTextNode.Remove();
+          }
+
           fileChanged = true;
         }
         else {
@@ -580,7 +589,8 @@ namespace FileIO {
     /// </summary>
     private void SaveXmlDocument(XDocument document) {
       XmlWriterSettings settings = new XmlWriterSettings();
-      settings.Encoding = FileIoHelper.DetectFileEncoding(_FileFullName);
+      //settings.Encoding = FileIoHelper.DetectFileEncoding(_FileFullName);
+      settings.Encoding = new UTF8Encoding(true);
       settings.Indent = false;
       settings.OmitXmlDeclaration = document.Declaration == null;
 

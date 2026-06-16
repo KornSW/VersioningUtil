@@ -15,7 +15,8 @@ namespace FileIO {
     void WritePackageDependencies(
       DependencyInfo[] packageDependencies,
       bool addNew, bool updateExisiting, bool deleteOthers,
-      bool allowDowngrade, string onlyForTargetFramework
+      bool allowDowngrade, string onlyForTargetFramework,
+      string[] packageIdWhitelist, string[] packageIdBlacklist
     );
 
     DependencyInfo[] ReadPackageDependencies(bool includeFrameworkInfo);

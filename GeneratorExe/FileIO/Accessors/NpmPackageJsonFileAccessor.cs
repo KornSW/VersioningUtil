@@ -60,9 +60,9 @@ namespace FileIO {
     }
 
     public void WritePackageDependencies(
-       DependencyInfo[] packageDependencies,
-       bool addNew, bool updateExisiting, bool deleteOthers,
-       bool allowDowngrade, string onlyForTargetFramework
+      DependencyInfo[] packageDependencies,
+      bool addNew, bool updateExisiting, bool deleteOthers, bool allowDowngrade,
+      string onlyForTargetFramework, string[] packageIdWhitelist, string[] packageIdBlacklist
      ) {
 
     }

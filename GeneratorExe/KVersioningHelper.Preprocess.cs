@@ -30,6 +30,12 @@ namespace Versioning {
         Console.WriteLine($"Pre-processing NuSpec '{nuspecFileFullName}'...");
 
         KvuNuspecPreProcessorConfiguration configuration = this.ReadSingleKvuConfigurationFromNuspec(nuspecFileFullName);
+        
+        if(configuration == null) {
+          Console.WriteLine($"No KVU configuration found in '{nuspecFileFullName}'. Skipping.");
+          continue;
+        }
+        
         NuspecFileAccessor nuspecAccessor = new NuspecFileAccessor(nuspecFileFullName);
 
         nuspecAccessor.WriteVersion(versionInfo);
@@ -152,15 +158,15 @@ namespace Versioning {
         .Where((dependency) => {
           return !this.ContainsPackageId(versioningTwins, dependency.TargetPackageId);
         })
-        .Where((dependency) => {
-          return this.IsAllowedByKvuLists(
-            dependency.TargetPackageId,
-            configuration.DependencySync.Whitelist,
-            configuration.DependencySync.Blacklist,
-            source.Whitelist,
-            source.Blacklist
-          );
-        })
+        //.Where((dependency) => {
+        //  return this.IsAllowedByKvuLists(
+        //    dependency.TargetPackageId,
+        //    configuration.DependencySync.Whitelist,
+        //    configuration.DependencySync.Blacklist,
+        //    source.Whitelist,
+        //    source.Blacklist
+        //  );
+        //})
         .Select((dependency) => {
           return this.CloneKvuDependencyForTargetFramework(
             dependency,
@@ -175,13 +181,23 @@ namespace Versioning {
         constraintType
       );
 
+      string[] packageIdWhitelist = this.NormalizeStringArray(
+        configuration.DependencySync.Whitelist
+      )
+      .Concat(this.NormalizeStringArray(source.Whitelist))
+      .ToArray();
+
+      string[] packageIdBlacklist = this.NormalizeStringArray(
+        configuration.DependencySync.Blacklist
+      )
+      .Concat(this.NormalizeStringArray(source.Blacklist))
+      .Concat(this.NormalizeStringArray(configuration.VersioningTwins)) //damit hier nicht herummanipuliert wird!
+      .ToArray();
+
       nuspecAccessor.WritePackageDependencies(
         sourceDependencies,
-        addMissing,
-        updateExisting,
-        removeOrphaned,
-        allowDowngrades,
-        onlyForTargetFramework
+        addMissing, updateExisting, removeOrphaned,  allowDowngrades,
+        onlyForTargetFramework, packageIdWhitelist, packageIdBlacklist
       );
     }
 
@@ -207,12 +223,10 @@ namespace Versioning {
 
       nuspecAccessor.WritePackageDependencies(
         twinDependencies,
-        true,
-        true,
-        false,
-        true,
-        null
+        true, true, false, true,
+        null, new string[] {"*"}, new string[0]
       );
+
     }
 
     /// <summary>
@@ -314,60 +328,60 @@ namespace Versioning {
       }
     }
 
-    /// <summary>
-    /// Checks whether the package id passes global and source-specific white/blacklist rules.
-    /// </summary>
-    private bool IsAllowedByKvuLists(
-      string packageId,
-      string[] globalWhitelist,
-      string[] globalBlacklist,
-      string[] sourceWhitelist,
-      string[] sourceBlacklist
-    ) {
-      if (!this.IsAllowedByWhitelist(packageId, globalWhitelist)) {
-        return false;
-      }
+    ///// <summary>
+    ///// Checks whether the package id passes global and source-specific white/blacklist rules.
+    ///// </summary>
+    //private bool IsAllowedByKvuLists(
+    //  string packageId,
+    //  string[] globalWhitelist,
+    //  string[] globalBlacklist,
+    //  string[] sourceWhitelist,
+    //  string[] sourceBlacklist
+    //) {
+    //  if (!this.IsAllowedByWhitelist(packageId, globalWhitelist)) {
+    //    return false;
+    //  }
 
-      if (!this.IsAllowedByWhitelist(packageId, sourceWhitelist)) {
-        return false;
-      }
+    //  if (!this.IsAllowedByWhitelist(packageId, sourceWhitelist)) {
+    //    return false;
+    //  }
 
-      if (this.IsDeniedByBlacklist(packageId, globalBlacklist)) {
-        return false;
-      }
+    //  if (this.IsDeniedByBlacklist(packageId, globalBlacklist)) {
+    //    return false;
+    //  }
 
-      if (this.IsDeniedByBlacklist(packageId, sourceBlacklist)) {
-        return false;
-      }
+    //  if (this.IsDeniedByBlacklist(packageId, sourceBlacklist)) {
+    //    return false;
+    //  }
 
-      return true;
-    }
+    //  return true;
+    //}
 
-    /// <summary>
-    /// Checks a whitelist. An empty whitelist allows everything.
-    /// </summary>
-    private bool IsAllowedByWhitelist(string packageId, string[] whitelist) {
-      string[] normalizedWhitelist = this.NormalizeStringArray(whitelist);
+    ///// <summary>
+    ///// Checks a whitelist. An empty whitelist allows everything.
+    ///// </summary>
+    //private bool IsAllowedByWhitelist(string packageId, string[] whitelist) {
+    //  string[] normalizedWhitelist = this.NormalizeStringArray(whitelist);
 
-      if (normalizedWhitelist.Length == 0) {
-        return true;
-      }
+    //  if (normalizedWhitelist.Length == 0) {
+    //    return true;
+    //  }
 
-      return normalizedWhitelist.Any((pattern) => {
-        return this.MatchesWildcardMask(packageId, pattern);
-      });
-    }
+    //  return normalizedWhitelist.Any((pattern) => {
+    //    return this.MatchesWildcardMask(packageId, pattern);
+    //  });
+    //}
 
-    /// <summary>
-    /// Checks a blacklist. An empty blacklist denies nothing.
-    /// </summary>
-    private bool IsDeniedByBlacklist(string packageId, string[] blacklist) {
-      string[] normalizedBlacklist = this.NormalizeStringArray(blacklist);
+    ///// <summary>
+    ///// Checks a blacklist. An empty blacklist denies nothing.
+    ///// </summary>
+    //private bool IsDeniedByBlacklist(string packageId, string[] blacklist) {
+    //  string[] normalizedBlacklist = this.NormalizeStringArray(blacklist);
 
-      return normalizedBlacklist.Any((pattern) => {
-        return this.MatchesWildcardMask(packageId, pattern);
-      });
-    }
+    //  return normalizedBlacklist.Any((pattern) => {
+    //    return this.MatchesWildcardMask(packageId, pattern);
+    //  });
+    //}
 
     /// <summary>
     /// Reads exactly one KVU configuration from XML comments of a NuSpec file.
@@ -387,7 +401,7 @@ namespace Versioning {
         .ToArray();
 
       if (configurations.Length == 0) {
-        throw new InvalidDataException("The NuSpec file contains no KVU pre-processor configuration.");
+        return null;
       }
 
       if (configurations.Length > 1) {
@@ -679,7 +693,7 @@ namespace Versioning {
 
     public string ConstraintLevel { get; set; } = "KEEP";
 
-    public string[] Whitelist { get; set; } = new string[0];
+    public string[] Whitelist { get; set; } = new string[] { "*" };
 
     public string[] Blacklist { get; set; } = new string[0];
 
