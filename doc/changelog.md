@@ -6,8 +6,14 @@
 
 ## Upcoming Changes
 
-* **new Feature**: the 'DoMagic'-Method to run the full workflow
-* many fixes regarding target-framework-routing
+*(none)*
+
+
+
+## v 3.2.0
+released **2026-06-16**, including:
+ - **new Feature**: the 'DoMagic'-Method to run the full workflow
+ - many fixes regarding target-framework-routing
 
 
 
