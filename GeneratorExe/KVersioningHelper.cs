@@ -1514,7 +1514,11 @@ namespace Versioning {
     /// 5: update the version in all project files (and other files) which are matching a given minimatch pattern
     /// 6: process all nuspec files (recursively) to update their dependency-constraints (if they contain a preprocessor-configuration)
     /// </summary>
-    public void DoMagic(string entryDirectory = "") {
+    public void DoMagic(
+      string entryDirectory = "",
+      string preReleaseSemantic = "",
+      string ignoreSemantic = "master;main;rel-*"
+    ) {
 
       if (string.IsNullOrWhiteSpace(entryDirectory)) {
         entryDirectory = Environment.CurrentDirectory;
@@ -1555,7 +1559,9 @@ namespace Versioning {
 
         this.CreateNewVersionOnChangelog(
           versionInfoFile,
-          changelogFile
+          changelogFile, 
+          preReleaseSemantic,
+          ignoreSemantic
         );
 
         this.InjectIntoAzureDevOpsBuildNumber(versionInfoFile);
