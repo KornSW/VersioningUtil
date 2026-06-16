@@ -10,6 +10,12 @@
 
 
 
+## v 3.2.1
+released **2026-06-16**, including:
+ - fix added missing support for preReleaseSemantic to DoMagic-method
+
+
+
 ## v 3.2.0
 released **2026-06-16**, including:
  - **new Feature**: the 'DoMagic'-Method to run the full workflow
