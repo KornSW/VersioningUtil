@@ -6,7 +6,13 @@
 
 ## Upcoming Changes
 
-* Fix: UTF8 without BOM for NPM package.json files
+*(none)*
+
+
+
+## v 3.2.2
+released **2026-06-19**, including:
+ - Fix: UTF8 without BOM for NPM package.json files
 
 
 

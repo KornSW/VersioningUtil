@@ -9,9 +9,9 @@
     <StartupObject>Versioning.Program</StartupObject>
     <Authors>KornSW</Authors>
     <Company>OpenSouce (KornSW)</Company>
-    <AssemblyVersion>3.2.1</AssemblyVersion>
-    <FileVersion>3.2.1</FileVersion>
-    <Version>3.2.1</Version>
+    <AssemblyVersion>3.2.2</AssemblyVersion>
+    <FileVersion>3.2.2</FileVersion>
+    <Version>3.2.2</Version>
     <PackageId>kVersioningUtil</PackageId>
     <Title>kVersioningUtil</Title>
     <Description>a commandline application that helps version in build pipelines</Description>
