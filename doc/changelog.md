@@ -6,7 +6,7 @@
 
 ## Upcoming Changes
 
-*(none)*
+* Fix: UTF8 without BOM for NPM package.json files
 
 
 

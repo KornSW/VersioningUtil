@@ -60,10 +60,20 @@ namespace FileIO {
       return Regex.Replace(input, regexSearch, replacement);
     }
 
-    public static bool WriteFile(string fileFullName, string rawContent,bool retryOnWriteProtect = true) {
+    public static bool WriteFile(
+      string fileFullName, string rawContent,
+      bool retryOnWriteProtect = true, Encoding specialEncoding = null
+    ) {
+
       try {
+
+        if(specialEncoding == null) {
+          //specialEncoding = DetectFileEncoding(fileFullName);
+          specialEncoding = new UTF8Encoding(true);
+        }
+
         using (FileStream fs = new FileStream(fileFullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {
-          using (StreamWriter sw = new StreamWriter(fs, new UTF8Encoding(true))) {
+          using (StreamWriter sw = new StreamWriter(fs, specialEncoding)) {
             sw.Write(rawContent);
             sw.Flush();
           }

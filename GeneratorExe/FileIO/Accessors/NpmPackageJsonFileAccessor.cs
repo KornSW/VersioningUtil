@@ -55,7 +55,10 @@ namespace FileIO {
 
       Console.WriteLine($"  Processed {matchCount} matches...");
       if (matchCount > 0) {
-        FileIoHelper.WriteFile(_FileFullName, rawContent);
+        FileIoHelper.WriteFile(
+          _FileFullName, rawContent, 
+          specialEncoding: new UTF8Encoding( encoderShouldEmitUTF8Identifier:false)
+        );
       }
     }
 
